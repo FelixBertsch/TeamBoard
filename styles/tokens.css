@@ -1,0 +1,36 @@
+/* Font: Nunito Sans (SIL Open Font License 1.1, see assets/fonts/OFL.txt), WOFF2 subset (Latin, German, typography). */
+@font-face{font-family:'Nunito Sans';font-style:normal;font-weight:200 1000;font-display:swap;src:url('../assets/fonts/nunito-sans.woff2') format('woff2')}
+/* Design tokens. Change values here only; components use the role variables. */
+:root{
+  --font:'Nunito Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  /* Base colors */
+  --navy-950:#0b1a28; --navy-900:#0f2437; --navy-800:#143048; --navy-700:#1d4360; --navy-600:#2a577a; --navy-500:#3d6e93;
+  --navy-400:#6b93b4; --navy-300:#9fbcd3; --navy-200:#cadcea; --navy-100:#e6eff5; --navy-50:#f2f7fb;
+  --coral-700:#b8434b; --coral-600:#cf535b; --coral-500:#e06870; --coral-300:#f2aab0; --coral-200:#f8ccd0; --coral-100:#fce4e6; --coral-50:#fdf2f3;
+  --paper:#f7f7fa; --white:#ffffff;
+  --neutral-100:#eef0f4; --neutral-200:#e0e3ea; --neutral-300:#c7ccd7; --neutral-400:#a2a9b8; --neutral-500:#7b8496;
+  --neutral-600:#5b6474; --neutral-700:#404857; --neutral-800:#2a313d;
+  --success-500:#2e9e6b; --warning-500:#e2a032; --warning-100:#fbeed3; --warning-700:#a9741b; --error-500:#d5484f; --error-100:#fbe1e2; --error-700:#a12f35;
+  /* Roles */
+  --bg-page:var(--paper); --surface-card:var(--white); --surface-sunken:var(--neutral-100);
+  --side-bg:var(--navy-800); --side-fg:var(--paper); --side-fg-2:var(--navy-200); --side-hover:var(--navy-700); --side-active:var(--navy-900); --side-av:var(--navy-700);
+  --text-strong:var(--navy-800); --text-body:var(--neutral-800); --text-muted:var(--neutral-600); --text-subtle:var(--neutral-500);
+  --border-subtle:var(--neutral-200); --border-default:var(--neutral-300); --field-border:var(--neutral-300); --line-day:var(--neutral-100);
+  --primary:var(--navy-800); --primary-hover:var(--navy-700); --primary-fg:var(--paper); --quiet-hover:var(--navy-50);
+  --accent:var(--coral-500); --accent-hover:var(--coral-600); --accent-press:var(--coral-700); --accent-fg:var(--white); --accent-text:var(--coral-700); --link:var(--coral-600);
+  --bar:var(--navy-800); --bar-2:var(--navy-600); --bar-3:var(--navy-200); --bar-3-fg:var(--navy-800); --bar-fg:var(--paper); --plan-bg:var(--white); --plan-line:var(--navy-400); --plan-fg:var(--navy-800); --done-bg:var(--neutral-100); --done-fg:var(--neutral-600);
+  --chip-bg:var(--white); --chip-line:var(--neutral-200); --mine-bg:var(--coral-100); --mine-fg:var(--coral-700);
+  --late-bg:var(--error-100); --late-fg:var(--error-700); --late:var(--error-500); --warn:var(--warning-500); --warn-bg:var(--warning-100); --warn-fg:var(--warning-700);
+  --today:var(--coral-50); --weekend:var(--paper); --abs:rgba(61,110,147,.15);
+  --av-bg:var(--navy-100); --av-fg:var(--navy-800); --me-bg:var(--coral-100); --me-fg:var(--coral-700);
+  --tag-on:var(--navy-800); --tag-on-fg:var(--paper); --badge-bg:var(--neutral-100); --badge-fg:var(--neutral-700);
+  --st-plan-bg:var(--navy-100); --st-plan-fg:var(--navy-800);
+  --toast-bg:var(--navy-900); --toast-fg:var(--paper); --toast-act:var(--coral-300); --scrim:rgba(11,26,40,.42);
+  --shadow-xs:0 1px 2px rgba(20,48,72,.06); --shadow-sm:0 2px 6px rgba(20,48,72,.08); --shadow-md:0 6px 18px rgba(20,48,72,.10);
+  --shadow-lg:0 16px 40px rgba(20,48,72,.14); --shadow-focus:0 0 0 3px rgba(224,104,112,.40);
+  --ease:cubic-bezier(.2,0,.1,1); --ease-in:cubic-bezier(.2,.8,.2,1);
+  color-scheme:only light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}

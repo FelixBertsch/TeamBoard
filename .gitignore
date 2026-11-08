@@ -1,0 +1,33 @@
+# --- User data: never publish -------------------------------------------
+# The backup folder's plain copy, daily backups and exports of the app.
+/data/
+**/Backups/
+teamboard-daten*.json
+# Any JSON outside the synthetic test fixtures.
+*.json
+!tests/fixtures/*.json
+
+# --- Credentials ----------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Test output ----------------------------------------------------------
+tests/screenshots/
+tests/output/
+
+# --- Tooling --------------------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+node_modules/
+
+# --- OS and editor --------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

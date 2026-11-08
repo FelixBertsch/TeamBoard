@@ -1,0 +1,30 @@
+#!/bin/sh
+# Pre-commit guard for the public TeamBoard repository.
+# Blocks commits that would publish user data, backups or secrets.
+# Install once per clone:  git config core.hooksPath .githooks
+
+fail=0
+
+# 1) File names: data folders, backups, any JSON (except synthetic fixtures)
+#    and credentials.
+blocked=$(git diff --cached --name-only --diff-filter=ACMR \
+  | grep -Ei '(^|/)(data|backups)/|\.json$|(^|/)\.env|\.pem$|\.key$' \
+  | grep -v '^tests/fixtures/')
+if [ -n "$blocked" ]; then
+  echo "pre-commit: these files look like user data, backups or secrets:"
+  echo "$blocked" | sed 's/^/  - /'
+  fail=1
+fi
+
+# 2) Content: anything that looks like a GitHub token in an added line.
+if git diff --cached -U0 --diff-filter=ACMR | grep -E '^\+' \
+   | grep -Eq 'github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{30,}'; then
+  echo "pre-commit: staged changes contain something that looks like a GitHub token."
+  fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "pre-commit: commit aborted. Unstage with: git restore --staged <file>"
+  exit 1
+fi
+exit 0

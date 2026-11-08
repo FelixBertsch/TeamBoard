@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="only light">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#143048">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Teamboard">
+<title>Teamboard</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/icons/favicon.png">
+<link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/nunito-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/components.css">
+<link rel="stylesheet" href="styles/layout.css">
+<!-- Classic scripts in dependency order, sharing one global scope. See AGENTS.md, "Architecture". -->
+<script defer src="src/config.js"></script>
+<script defer src="src/core/util.js"></script>
+<script defer src="src/core/holidays.js"></script>
+<script defer src="src/core/model.js"></script>
+<script defer src="src/core/quick-parse.js"></script>
+<script defer src="src/core/issues.js"></script>
+<script defer src="src/ui/layout.js"></script>
+<script defer src="src/ui/icons.js"></script>
+<script defer src="src/ui/feedback.js"></script>
+<script defer src="src/ui/sidebar.js"></script>
+<script defer src="src/ui/timeline.js"></script>
+<script defer src="src/ui/views-desktop.js"></script>
+<script defer src="src/ui/views-phone.js"></script>
+<script defer src="src/ui/views-history.js"></script>
+<script defer src="src/ui/render.js"></script>
+<script defer src="src/ui/drawer.js"></script>
+<script defer src="src/ui/datepicker.js"></script>
+<script defer src="src/ui/capture.js"></script>
+<script defer src="src/ui/setup.js"></script>
+<script defer src="src/ui/onboarding.js"></script>
+<script defer src="src/ui/suggest.js"></script>
+<script defer src="src/ui/events.js"></script>
+<script defer src="src/ui/drag.js"></script>
+<script defer src="src/storage/idb.js"></script>
+<script defer src="src/storage/vault.js"></script>
+<script defer src="src/storage/github.js"></script>
+<script defer src="src/storage/merge.js"></script>
+<script defer src="src/storage/backup.js"></script>
+<script defer src="src/storage/store.js"></script>
+<script defer src="src/main.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side" aria-label="Navigation"></aside>
+  <main class="main" id="main"></main>
+</div>
+<div class="scrim" data-action="close-drawer"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Bearbeiten" tabindex="-1"></aside>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="dlg-scrim" id="dlg"></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+</body>
+</html>
