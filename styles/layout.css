@@ -1,7 +1,7 @@
 /* Layout areas. applyLayout() sets on <html>: lay-phone (phone), lay-rail (laptop icon bar), touch (coarse pointer).
    No class: monitor with sidebar. Wide monitors additionally via media queries from 1800 and 2200 px. */
 button,a,.tag,.tags label span{touch-action:manipulation}
-.side .more-btn,.adot{display:none}
+.adot{display:none}
 .nav.add+.nav.add{margin-top:0}
 .drawer .sync{color:var(--text-strong)}
 .drawer .sync-file{color:var(--text-muted);margin-left:18px}
@@ -10,7 +10,8 @@ button,a,.tag,.tags label span{touch-action:manipulation}
 .more-list .prow{min-height:48px;padding:10px 4px;font-weight:700;color:var(--text-strong)}
 .more-list .prow .ic{color:var(--text-muted)}
 .more-keys{margin-top:20px;font-size:14px;color:var(--text-muted)}
-.more-keys kbd{font:inherit;font-weight:800;color:var(--text-strong)}
+.more-keys .keys{margin:0}
+.more-keys kbd{border-color:var(--border-default);color:var(--text-strong)}
 .seg{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--surface-sunken);margin-bottom:20px}
 .seg-b{flex:1;min-height:40px;border:0;border-radius:999px;background:none;font-size:14px;font-weight:800;color:var(--text-muted);cursor:pointer;white-space:nowrap;padding:0 8px}
 .seg-b[aria-selected="true"]{background:var(--surface-card);color:var(--text-strong);box-shadow:var(--shadow-sm)}
@@ -32,7 +33,7 @@ button,a,.tag,.tags label span{touch-action:manipulation}
 /* Laptop: icon bar instead of sidebar */
 .lay-rail .app{grid-template-columns:76px minmax(0,1fr)}
 .lay-rail .side{padding:20px 10px 16px;align-items:center}
-.lay-rail .brand-logo,.lay-rail .nav .nm,.lay-rail .side-foot p,.lay-rail .side-foot .row,.lay-rail .sync-file{display:none}
+.lay-rail .brand-logo,.lay-rail .nav .nm,.lay-rail .side-foot .keys,.lay-rail .sync-file{display:none}
 .lay-rail .brand{padding:0 0 16px}
 .lay-rail .brand-mark{display:block}
 .lay-rail .side-label{font-size:0;padding:0;margin:10px 0;height:1px;width:36px;background:var(--navy-700)}
@@ -40,8 +41,7 @@ button,a,.tag,.tags label span{touch-action:manipulation}
 .lay-rail .nav.add{margin-top:8px}
 .lay-rail .nav .cnt{position:absolute;top:2px;right:0;min-width:20px;height:18px;padding:0 5px;font-size:11px;box-shadow:0 0 0 2px var(--side-bg)}
 .lay-rail .adot{display:block;position:absolute;left:8px;bottom:8px;width:12px;height:12px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--side-bg)}
-.lay-rail .side .more-btn{display:flex}
-.lay-rail .side .nav.contacts{display:none} /* under "Mehr" on the icon bar */
+.lay-rail .side-low{align-items:center}
 .lay-rail .side-foot{padding:8px 0 0;display:flex;flex-direction:column;align-items:center}
 .lay-rail .sync{font-size:0;gap:0;padding:8px}
 .lay-rail .main{padding:24px 32px 48px}
@@ -129,6 +129,10 @@ html.lay-phone,.lay-phone body{height:auto}
 .strip .sb.aktiv{background:var(--bar);color:var(--bar-fg)}
 .strip .sb.geplant{background:var(--plan-bg);color:var(--plan-fg);box-shadow:inset 0 0 0 2px var(--plan-line)}
 .strip .sb.erledigt{background:var(--done-bg);color:var(--done-fg)}
+.strip .sb.inv{display:flex;align-items:center;gap:4px;background:var(--with-bg);color:var(--with-fg);border:2px dashed var(--with-line);line-height:18px;padding:0 8px 0 5px}
+.strip .sb.inv .ic{flex:none}
+.strip .sb.inv span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.strip .sb.inv.inv-done{color:var(--done-fg);border-color:var(--border-subtle)}
 .strip .sb::before{content:"";position:absolute;inset:-8px 0}
 .strip .empty-s{position:absolute;left:8px;top:4px;font-size:12px;color:var(--text-subtle)}
 /* Bottom sheet */

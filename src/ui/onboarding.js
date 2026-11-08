@@ -49,7 +49,7 @@ const TOUR={
     {hash:'ma-lena',sel:['[data-tour=talks]'],title:'Die Seite einer Person',text:'Ein Klick auf einen Namen öffnet seine Seite mit Aufgaben, Themen, Projekten und Abwesenheiten. „Fürs nächste Gespräch“ sammelt deine Punkte fürs nächste 1:1, darunter steht der Jahresrückblick.'},
     {hash:'ich',sel:['[data-tour=tasks]'],title:'Meine Planung',text:'Deine eigenen Aufgaben, deine To-dos zu Mitarbeitern und alles, worauf du wartest. Der Filter „Für“ zeigt alles zu einer Person, auch zu Kontakten außerhalb des Teams, praktisch vor einem Jour fixe.'},
     {hash:'verlauf',sel:['[data-tour=history]'],title:'Verlauf',text:'Was erledigt, besprochen oder abgeschlossen ist, Woche für Woche, mit Suche und Filter nach Person und Art. Krankheitstage stehen hier bewusst nicht.'},
-    {hash:'uebersicht',sel:['.side .more-btn','.side-foot'],title:'Sync, Sicherung und Mehr',text:'Hier siehst du, ob alles synchronisiert ist. Unter „Mehr“ findest du Sicherungen, den Sicherungsordner, die Feiertage deines Bundeslands und diesen Rundgang. Strg+Z macht die letzte Änderung rückgängig.'},
+    {hash:'uebersicht',sel:['[data-tour=more]'],title:'Mehr, Kürzel und Sync',text:'Unten siehst du, ob alles synchronisiert ist, und die wichtigsten Tastenkürzel. Unter „Mehr“ findest du Kontakte außerhalb des Teams, Sicherungen, den Sicherungsordner, die Feiertage deines Bundeslands und diesen Rundgang.'},
     {hash:'uebersicht',title:'Jetzt dein Board',text:'',end:true}],
   phone:[
     {hash:'uebersicht',title:'Willkommen im Teamboard',text:'Der Rundgang zeigt dir Schritt für Schritt, wie das Teamboard auf dem Smartphone funktioniert. Er läuft auf Beispieldaten, deine eigenen Daten bleiben unberührt.'},

@@ -50,7 +50,7 @@ function inlineCreate(track,a,b){
 document.addEventListener('pointerdown',e=>{
   const pending=document.querySelector('.tl-new input');
   if(pending&&!e.target.closest('.tl-new')){pending.blur();suppressUntil=Date.now()+300;return}
-  if(e.button!==0||e.target.closest('.mini-check,.tl-new,.abs-label'))return;
+  if(e.button!==0||e.target.closest('.mini-check,.tl-new,.abs-label,.wbar'))return;
   const chip=e.target.closest('.tchip,.tmark[data-todo]');
   if(!chip&&e.target.closest('.tmark'))return; // several todos: a click pins the list (events.js)
   if(chip){const t=S.todos.find(x=>x.id===chip.dataset.todo);if(!t)return;
@@ -84,7 +84,7 @@ document.addEventListener('pointermove',e=>{
   }
   const track=e.target.closest?.('.tl-track');
   if(hoverTrack&&hoverTrack!==track)hideGhost(hoverTrack);hoverTrack=track;
-  if(track){if(e.target.closest('.bar,.tchip,.tmark,.abs-label,.tl-new')||track.querySelector('.tl-new')){hideGhost(track);return}
+  if(track){if(e.target.closest('.bar,.wbar,.tchip,.tmark,.abs-label,.tl-new')||track.querySelector('.tl-new')){hideGhost(track);return}
     const day=dayAt(track,e.clientX);T.fine?showGhost(track,day,day,'Klick: Aufgabe, ziehen: Thema'):showGhost(track,day,Math.min(day+4,T.end),'Klick oder ziehen: Thema')}
 });
 document.addEventListener('pointerup',()=>{

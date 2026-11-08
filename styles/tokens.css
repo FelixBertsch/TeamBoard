@@ -19,6 +19,7 @@
   --primary:var(--navy-800); --primary-hover:var(--navy-700); --primary-fg:var(--paper); --quiet-hover:var(--navy-50);
   --accent:var(--coral-500); --accent-hover:var(--coral-600); --accent-press:var(--coral-700); --accent-fg:var(--white); --accent-text:var(--coral-700); --link:var(--coral-600);
   --bar:var(--navy-800); --bar-2:var(--navy-600); --bar-3:var(--navy-200); --bar-3-fg:var(--navy-800); --bar-fg:var(--paper); --plan-bg:var(--white); --plan-line:var(--navy-400); --plan-fg:var(--navy-800); --done-bg:var(--neutral-100); --done-fg:var(--neutral-600);
+  --with-bg:var(--white); --with-line:var(--neutral-400); --with-fg:var(--navy-800);
   --chip-bg:var(--white); --chip-line:var(--neutral-200); --mine-bg:var(--coral-100); --mine-fg:var(--coral-700);
   --late-bg:var(--error-100); --late-fg:var(--error-700); --late:var(--error-500); --warn:var(--warning-500); --warn-bg:var(--warning-100); --warn-fg:var(--warning-700);
   --today:var(--coral-50); --weekend:var(--paper); --abs:rgba(61,110,147,.15);

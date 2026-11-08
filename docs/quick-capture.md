@@ -1,0 +1,13 @@
+# Quick capture and suggestions
+
+Read this before you change `src/core/quick-parse.js`, `src/ui/suggest.js` or `src/ui/capture.js`.
+
+`parseQuick(raw, ctx)` returns `{type:'todo', title, personId, kind, due, with, repeat}` or `{type:'absence', personId, absKind, start, end, note}`, plus `unknown` or `ambiguous` (several people match).
+
+- Several `@` are allowed (`parseMentions()`): the first team member or `@ich` is responsible and leaves the title; contacts and every further person go into `with` and stay in the title as plain names. "@ich Foliendeck für @Mark prüfen" is my todo "Foliendeck für Mark prüfen" with Mark involved; "Folien für @Mark" too, because a contact cannot be responsible. An unknown name stays as text and the preview says so; the suggestion list offers "„Name“ als Kontakt anlegen" when nobody matches.
+- `@` resolves full names first (longest match, so "@Fabian Müller Review" works), then one word that starts a first or last name; an exact word wins over prefixes. Several matches → `ambiguous`: nothing is created, the preview names the candidates.
+- **Due date in the text:** "am", "zum" or "bis" plus a date (`takeDate()`): `12.11`, `12.11.2026`, `heute`, `morgen`, `Fr`, `Freitag` (`parseDateWord()`) or day plus month name, `12. November`, `3. Dez 2027` (`MONTHS`). "heute", "morgen" and "übermorgen" also count alone (`takeLoneDay()`). Other dates need the keyword on purpose: titles contain numbers and weekdays ("Release 4.2", "Termin Freitag absagen"). A keyword followed by no date ("am Ende") stays in the title. Without a year, a date more than 60 days back means next year (`mkDate()`).
+- Todo tags `#ich`/`#meins`, `#wartet`. Repeat tags `#wöchentlich`, `#zweiwöchentlich`, `#monatlich`, `#quartalsweise`, `#jährlich` (`REPEAT_TAGS`, matched after `fold()`, so without umlauts too). Absence tags `#urlaub`, `#krank`, `#schulung`, `#abwesend` (`ABS_TAGS`): "bis X" is the end, "ab/vom/am X" or a lone date word the start, default today. Remaining text becomes the note, except for `#krank`.
+- `firstName(p)` returns "Fabian M." when two people share a first name; `mentionText(p)` is what the suggestion list inserts (first name, or the full name if shared).
+- The suggestion list (`suggest.js`) opens on `@` or `#`, filters while typing, ↑/↓ move, Tab and Enter take the marked entry, Esc closes only the list. It closes by itself when the token is already complete, so Enter then submits. Picking uses `pointerdown` with `preventDefault()` so the field keeps focus. `Store.busy()` is true while it is open.
+- Phone sheet: an absence tag switches to the prefilled absence form on submit (`openCapture('absence', '', preset)`).

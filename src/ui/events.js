@@ -61,7 +61,7 @@ document.addEventListener('click',async e=>{
   const mark=e.target.closest('.tmark.multi');
   if(mark){showPop(mark,true);return}
   const track=e.target.closest('.tl-track');
-  if(track&&!e.target.closest('.bar,.tchip,.tmark,.tl-new')&&Date.now()>suppressUntil){
+  if(track&&!e.target.closest('.bar,.wbar,.tchip,.tmark,.tl-new')&&Date.now()>suppressUntil){
     const day=dayAt(track,e.clientX),pid=track.dataset.person;
     if(T.fine)openTodo(null,{personId:pid,due:ds(day)});else openTopic(null,{personId:pid,start:ds(day),end:ds(day+4)});
   }

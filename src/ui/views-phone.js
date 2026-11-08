@@ -17,12 +17,13 @@ function stripHTML(pid,start){
   let h='';for(let i=0;i<N;i++){const d=start+i,w=wdOf(d);h+=`<span class="sd${w===0||w===6||holidayOn(d)?' we':''}${d===TDN?' td':''}" style="left:${pc(d)};width:${wpc(1)}"></span>`}
   for(const a of S.absences.filter(a=>a.personId===pid&&dn(a.end)>=start&&dn(a.start)<=end)){const s=Math.max(dn(a.start),start),e=Math.min(dn(a.end),end);
     h+=`<span class="sa" style="left:${pc(s)};width:${wpc(e-s+1)}"></span>`}
-  const tops=S.topics.filter(t=>t.personId===pid&&dn(t.end)>=start&&dn(t.start)<=end).sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end));
-  const lanes=[];let bars='';
-  for(const t of tops){let l=lanes.findIndex(e=>e<dn(t.start));if(l<0){l=lanes.length;lanes.push(0)}lanes[l]=dn(t.end);
-    const s=Math.max(dn(t.start),start),e=Math.min(dn(t.end),end);
-    bars+=`<button class="sb ${t.status}" data-action="edit-topic" data-id="${t.id}" style="left:calc(${pc(s)} + 2px);width:calc(${wpc(e-s+1)} - 4px);top:${4+l*26}px" aria-label="${esc(t.title)}, ${dm(t.start)} bis ${dm(t.end)}">${esc(t.title)}</button>`}
-  return`<div class="strip" style="height:${Math.max(30,8+lanes.length*26)}px">${h}${bars}${tops.length?'':'<span class="empty-s">Kein Thema in diesen zwei Wochen</span>'}</div>`;
+  const own=placeLanes(S.topics.filter(t=>t.personId===pid&&dn(t.end)>=start&&dn(t.start)<=end).sort(byStart)),inv=placeLanes(involvedTopics(pid,start,end));
+  const bar=(t,top,cls,label,text)=>{const s=Math.max(dn(t.start),start),e=Math.min(dn(t.end),end);
+    return`<button class="sb ${cls}" data-action="edit-topic" data-id="${t.id}" style="left:calc(${pc(s)} + 2px);width:calc(${wpc(e-s+1)} - 4px);top:${top}px" aria-label="${esc(label)}, ${dm(t.start)} bis ${dm(t.end)}">${text}</button>`};
+  let bars=own.placed.map(({t,l})=>bar(t,4+l*26,t.status,t.title,esc(t.title))).join('');
+  bars+=inv.placed.map(({t,l})=>bar(t,4+(own.n+l)*26,`inv${t.status==='erledigt'?' inv-done':''}`,`Beteiligt an ${t.title}, verantwortlich: ${ownerName(t)}`,`${ic('users',12)}<span>${esc(ownerName(t))}: ${esc(t.title)}</span>`)).join('');
+  const n=own.n+inv.n;
+  return`<div class="strip" style="height:${Math.max(30,8+n*26)}px">${h}${bars}${n?'':'<span class="empty-s">Kein Thema in diesen zwei Wochen</span>'}</div>`;
 }
 function viewTeam(banner=''){
   const start=mondayOf(TDN),open=S.todos.filter(t=>!t.done),wd=s=>`${WD[wdOf(dn(s))]} ${dm(s)}`;

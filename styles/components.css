@@ -30,10 +30,13 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .nav-icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--side-av);flex:none}
 .nav.add{color:var(--side-fg-2);margin-top:8px}
 .nav.add:hover{color:var(--side-fg)}
-.side-foot{margin-top:auto;padding:32px 12px 0;font-size:13px;color:var(--side-fg-2);line-height:1.6}
-.side-foot p{margin:0 0 12px}
-.side-foot kbd{font:inherit;font-weight:800;color:var(--side-fg)}
-.side-foot button{border:0;background:none;padding:0;color:var(--side-fg);font-weight:700;font-size:13px;cursor:pointer;margin-right:16px;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--navy-400)}
+/* Bottom of the sidebar: "Mehr", shortcuts (keysHTML) and sync status */
+.side-low{margin-top:auto;padding-top:24px;display:flex;flex-direction:column;gap:4px}
+.side-foot{padding:16px 4px 0 12px;font-size:13px;color:var(--side-fg-2);line-height:1.6}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center;margin:0 0 16px}
+.keys dt{display:flex;gap:3px}
+.keys dd{margin:0;white-space:nowrap}
+.keys kbd{font:800 12px/18px var(--font);min-width:22px;padding:0 5px;text-align:center;border:2px solid var(--navy-600);border-radius:6px;color:var(--side-fg)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--warn);display:inline-block;margin-right:6px;vertical-align:1px}
 
 .av{width:32px;height:32px;border-radius:50%;background:var(--av-bg);color:var(--av-fg);display:grid;place-items:center;font-size:12px;font-weight:800;flex:none}
@@ -114,6 +117,7 @@ h3{font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.02em;color:v
 .sw.erledigt{background:var(--done-bg);box-shadow:inset 0 0 0 1px var(--border-default)}
 .sw.off{border-radius:2px;background:repeating-linear-gradient(135deg,var(--navy-400) 0 2px,transparent 2px 4px)}
 .sw.mine{background:var(--mine-bg);box-shadow:inset 0 0 0 1.5px var(--coral-500)}
+.sw.with{background:var(--with-bg);border:1.5px dashed var(--with-line)}
 .pager{display:flex;gap:4px;align-items:center}
 
 /* Timeline */
@@ -177,6 +181,14 @@ h3{font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.02em;color:v
 .flag{width:18px;height:18px;border-radius:50%;background:var(--white);display:grid;place-items:center;flex:none;margin-left:-6px;pointer-events:none}
 .flag.late{color:var(--error-500)}
 .flag.warn{color:var(--warning-700)}
+/* Topics of others the person is involved in (timeline.js wbarHTML): thin, dashed, never draggable */
+.wbar{position:absolute;height:22px;border-radius:999px;border:2px dashed var(--with-line);background:var(--with-bg);color:var(--with-fg);padding:0 10px 0 7px;
+  display:flex;align-items:center;gap:5px;z-index:3;font:700 12px/18px var(--font);white-space:nowrap;overflow:hidden;cursor:pointer;text-align:left}
+.wbar span{overflow:hidden;text-overflow:ellipsis;min-width:0;pointer-events:none}
+.wbar .ic{flex:none;pointer-events:none}
+.wbar:hover{border-color:var(--navy-400);box-shadow:var(--shadow-sm)}
+.wbar:focus-visible{outline:none;box-shadow:var(--shadow-focus)}
+.wbar.erledigt{color:var(--done-fg);border-color:var(--border-subtle)}
 .bar .h{position:absolute;top:0;bottom:0;width:10px;cursor:ew-resize}
 .bar .h-l{left:0}.bar .h-r{right:0}
 .tchip{position:absolute;height:28px;border-radius:999px;background:var(--chip-bg);box-shadow:inset 0 0 0 1px var(--chip-line),var(--shadow-xs);display:flex;align-items:center;gap:6px;
@@ -365,8 +377,6 @@ button.date-pick:focus-visible{outline:none;box-shadow:var(--shadow-focus)}
 .sdot{width:10px;height:10px;border-radius:50%;background:var(--neutral-400);flex:none}
 .sdot.saved{background:var(--success-500)}.sdot.pending,.sdot.saving{background:var(--warning-500)}.sdot.error{background:var(--error-500)}
 .sync-file{display:block;font-size:12px;color:var(--side-fg-2);overflow-wrap:anywhere;margin:2px 0 10px 18px}
-.side-foot .row{display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:12px}
-.side-foot .row button{margin-right:0}
 .banner{display:flex;gap:12px;align-items:center;padding:8px 8px 8px 18px;min-height:48px;border-radius:20px;background:var(--surface-accent-soft,var(--coral-100));color:var(--coral-700);font-weight:700;font-size:15px;margin-bottom:20px}
 .banner .sp{flex:1}
 .dlg-scrim{position:fixed;inset:0;background:var(--scrim);z-index:70;display:none;place-items:center;padding:24px}
@@ -497,4 +507,3 @@ input[list]::-webkit-calendar-picker-indicator{display:none!important}
 .tour-card .sp{flex:1}
 html.touring .toast{z-index:90}
 
-.side-foot .row button{text-align:left}

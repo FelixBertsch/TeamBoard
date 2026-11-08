@@ -171,6 +171,6 @@ function openMore(){
   const row=(act,icon,label)=>`<button type="button" class="prow" data-action="${act}">${ic(icon,18)}<span class="pt">${label}</span></button>`;
   const rows=`<button type="button" class="prow" data-action="go" data-v="verlauf">${ic('history',18)}<span class="pt">Verlauf</span></button>`
     +row('new-person','userPlus','Person hinzufügen')+row('contacts','contact','Kontakte')+storageActions().map(a=>row(...a)).join('');
-  openDrawer({title:'Mehr',body:`<div class="more-sync">${syncHTML().replace(' id="syncState"','')}</div><div class="more-list">${rows}</div>
-    ${isPhone()?'':'<p class="more-keys"><kbd>N</kbd> erfasst eine Aufgabe, <kbd>W</kbd>, <kbd>2</kbd> und <kbd>6</kbd> wechseln die Ansicht, <kbd>Strg+Z</kbd> macht rückgängig.</p>'}`});
+  openDrawer({title:'Mehr',body:`<div class="more-sync">${syncHTML(true).replace(' id="syncState"','')}</div><div class="more-list">${rows}</div>
+    ${isPhone()?'':`<div class="more-keys">${keysHTML()}</div>`}`});
 }

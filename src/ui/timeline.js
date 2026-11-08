@@ -67,6 +67,19 @@ function barHTML(t,l,tone=0){
   return`<div class="bar ${t.status} tone-${tone}" data-id="${t.id}" tabindex="0" role="button" style="left:${x.l}px;width:${x.w}px;top:${10+l*LANE}px"
     title="${esc(t.title)}: ${dm(t.start)} bis ${dm(t.end)}.${withOf(t).length?` Mit ${esc(withNames(t))}.`:''}${note}"><span class="h h-l"></span>${late?`<span class="flag late">${ic('alert',14,2.5)}</span>`:ov?`<span class="flag warn">${ic('alert',14,2.5)}</span>`:''}<span class="bar-t">${esc(t.title)}</span><span class="h h-r"></span></div>`;
 }
+/* Topics of others in which a person is involved (`with`). They show in a thin lane below the person's own bars: neutral,
+   dashed, with the responsible person's name. Not draggable; a click opens the topic. The phone strip uses the same list. */
+const WLANE=28;
+const byStart=(a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end);
+const involvedTopics=(pid,s,e)=>S.topics.filter(t=>withOf(t).includes(pid)&&dn(t.end)>=s&&dn(t.start)<=e).sort(byStart);
+/* Greedy lane placement by start: [{t,l}] plus the number of lanes. */
+function placeLanes(list){const lanes=[];
+  const placed=list.map(t=>{let l=lanes.findIndex(e=>e<dn(t.start));if(l<0){l=lanes.length;lanes.push(0)}lanes[l]=dn(t.end);return{t,l}});
+  return{placed,n:lanes.length}}
+const ownerName=t=>{const o=personOf(t.personId);return o.id==='me'?'Ich':firstName(o)};
+function wbarHTML(t,top){const x=pos(t.start,t.end),who=ownerName(t);
+  return`<button class="wbar ${t.status}" data-action="edit-topic" data-id="${t.id}" style="left:${x.l}px;width:${x.w}px;top:${top}px"
+    title="Beteiligt an ${esc(t.title)}, verantwortlich: ${esc(who)}, ${TOPIC_ST[t.status]}, ${dm(t.start)} bis ${dm(t.end)}">${ic('users',13)}<span>${esc(who)}: ${esc(t.title)}</span></button>`}
 function timeline(ids){
   layout();hidePop();
   const bg=T.cols.map((c,i)=>{const w=wdOf(c.d),cl=['col'];if(i===0)cl.push('first');if(T.fine)cl.push('dl');if(w===1&&!T.week)cl.push('wk');
@@ -75,27 +88,27 @@ function timeline(ids){
   let rows='';
   for(const id of ids){
     const p=personOf(id);
-    const tops=S.topics.filter(t=>t.personId===id&&dn(t.end)>=T.start&&dn(t.start)<=T.end).sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end));
-    const lanes=[];const placed=tops.map(t=>{let l=lanes.findIndex(e=>e<dn(t.start));if(l<0){l=lanes.length;lanes.push(0)}lanes[l]=dn(t.end);return{t,l}});
+    const own=placeLanes(S.topics.filter(t=>t.personId===id&&dn(t.end)>=T.start&&dn(t.start)<=T.end).sort(byStart)),placed=own.placed;
+    const inv=placeLanes(involvedTopics(id,T.start,T.end)),wTop=10+own.n*LANE;
     const byDay={};
     for(const t of S.todos){if(t.done||t.personId!==id||!t.due)continue;let d=dn(t.due);if(d<TDN&&todayIn)d=TDN;if(d<T.start||d>T.end)continue;(byDay[d]=byDay[d]||[]).push(t)}
-    let chips='',stack=0;const top0=10+lanes.length*LANE;
+    let chips='',stack=0;const top0=wTop+inv.n*WLANE+(inv.n?4:0);
     for(const d in byDay){const list=byDay[d].sort(byDue),c=colOf(+d);
       if(c.w>=CHIP_MIN){stack=Math.max(stack,list.length);list.forEach((t,i)=>{chips+=chipHTML(t,c,top0+i*CH)})}
       else{stack=Math.max(stack,1);chips+=markHTML(list,c,top0+2,id)}}
-    const h=Math.max(T.fine?80:68,10+lanes.length*LANE+stack*CH+26);
+    const h=Math.max(T.fine?80:68,top0+stack*CH+26);
     const abs=S.absences.filter(a=>a.personId===id&&dn(a.end)>=T.start&&dn(a.start)<=T.end);
     const proj=projectLabel(id,S.assignments.filter(a=>a.personId===id&&asgOverlaps(a,ds(T.start),ds(T.end))).sort(asgSort));
     rows+=`<div class="tl-row" style="height:${h}px"><a class="tl-label" href="${hrefOf(id)}">${avatar(p,'sm')}<span class="ln"><span>${esc(p.id==='me'?'Ich':p.name)}</span>${proj?`<small>${esc(proj)}</small>`:''}</span></a>
       <div class="tl-track" data-person="${id}" style="width:${T.width}px">${bg}
       ${abs.map(a=>{const x=pos(a.start,a.end);return`<div class="abs" style="left:${x.l-3}px;width:${x.w+6}px"><button class="abs-label" data-action="edit-absence" data-id="${a.id}" title="${esc(absLabel(a.kind))}, ${dm(a.start)} bis ${dm(a.end)}">${esc(absLabel(a.kind))}</button></div>`}).join('')}
-      ${placed.map(({t,l})=>barHTML(t,l,tones[t.id])).join('')}${chips}<div class="tl-ghost" hidden></div></div></div>`;
+      ${placed.map(({t,l})=>barHTML(t,l,tones[t.id])).join('')}${inv.placed.map(({t,l})=>wbarHTML(t,wTop+l*WLANE)).join('')}${chips}<div class="tl-ghost" hidden></div></div></div>`;
   }
   return`<div class="tl"><div class="tl-grid" style="width:${LABEL+T.width}px;--label:${LABEL}px">${headHTML()}${rows}</div></div>`;
 }
 function tlSection(ids){
   const r=rangeWeeks(),fine=r<=2;
-  const legend=`<span><i class="sw aktiv"></i>Aktiv</span><span><i class="sw geplant"></i>Geplant</span><span><i class="sw erledigt"></i>Erledigt</span><span><i class="sw off"></i>Abwesend</span><span><i class="sw mine"></i>Mein To-do</span>`;
+  const legend=`<span><i class="sw aktiv"></i>Aktiv</span><span><i class="sw geplant"></i>Geplant</span><span><i class="sw erledigt"></i>Erledigt</span><span><i class="sw off"></i>Abwesend</span><span><i class="sw mine"></i>Mein To-do</span><span><i class="sw with"></i>Beteiligt</span>`;
   const btn=(v,l)=>`<button class="tag" data-action="range" data-v="${v}" aria-pressed="${ui.range===v}">${l}</button>`;
   return`<section class="card tl-card" data-tour="timeline"><div class="tl-top">
     <div class="sec-head"><div class="tags" role="group" aria-label="Zeitraum">${btn('week','Woche')}${btn('two','2 Wochen')}${btn('six','6 Wochen')}</div>

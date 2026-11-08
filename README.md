@@ -56,7 +56,7 @@ Einmal pro Klon den Hook aktivieren, der Daten und Tokens aus diesem öffentlich
 git config core.hooksPath .githooks
 ```
 
-Architektur, Datenmodell und Konventionen stehen in [AGENTS.md](AGENTS.md) (Englisch). Die Oberfläche ist Deutsch.
+Architektur und Konventionen stehen in [AGENTS.md](AGENTS.md), Details pro Bereich in [docs/](docs) (Englisch). Die Oberfläche ist Deutsch.
 
 ## Lizenz
 

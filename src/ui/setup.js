@@ -68,14 +68,17 @@ function confirmDisconnect() {
       await Store.disconnect(); closeDrawer(false); render(); toast('Abgemeldet'); } }] });
 }
 
-function syncHTML() {
+/* Sync status. Compact (sidebar, updated in place via #syncState): the repository only in the tooltip, errors visible.
+   Full ("Mehr"): the repository below the status. */
+function syncHTML(full = false) {
   const st = Store.status;
   if (Store.mode === 'demo') return `<div id="syncState"><div class="sync" title="Beispielmodus, nichts wird gespeichert"><span class="sdot pending"></span>Beispielmodus</div><span class="sync-file">Änderungen werden nicht gespeichert.</span></div>`;
   const time = Store.lastSavedAt ? stamp(Store.lastSavedAt) : '';
   const label = { saved: `Synchronisiert ${time}`, pending: 'Änderungen offen', saving: 'Synchronisiert …', loading: 'Lädt …',
     offline: 'Offline, wird nachgereicht', error: 'Synchronisieren fehlgeschlagen', idle: 'Verbunden', outdated: 'Neue Version, bitte neu laden' }[st] || '';
   const sub = st === 'error' ? Store.error : st === 'outdated' ? 'Änderungen bleiben auf dem Gerät' : Store.gh?.repo || '';
-  return `<div id="syncState"><div class="sync" title="${esc(label)}"><span class="sdot ${st === 'outdated' ? 'error' : st}"></span>${esc(label)}</div><span class="sync-file" title="${esc(sub)}">${esc(sub)}</span></div>`;
+  const show = full || st === 'error' || st === 'outdated';
+  return `<div id="syncState"><div class="sync" title="${esc(sub && !show ? `${label}, ${sub}` : label)}"><span class="sdot ${st === 'outdated' ? 'error' : st}"></span>${esc(label)}</div>${show && sub ? `<span class="sync-file" title="${esc(sub)}">${esc(sub)}</span>` : ''}</div>`;
 }
 const stamp = d => d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
