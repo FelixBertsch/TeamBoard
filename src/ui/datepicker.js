@@ -88,5 +88,9 @@ function dpKey(e){
 }
 document.addEventListener('pointerdown',e=>{if(dp&&!e.target.closest('#dp')&&e.target.closest('.date-pick')!==dp.btn)closeDp(false)},true);
 document.addEventListener('focusout',e=>{if(!dp)return;const to=e.relatedTarget;if(to&&!to.closest('#dp')&&to!==dp.btn&&to!==dp.input)closeDp(false)});
-document.addEventListener('scroll',e=>{if(dp&&!e.target.closest?.('#dp'))closeDp(false)},true);
+/* Scrolling the page or the form moves the calendar along while its field stays visible in the scrolled area; it closes once the
+   field is scrolled out. Closing on every scroll lost the calendar to late scroll events (trackpad inertia, scroll into view). */
+document.addEventListener('scroll',e=>{if(!dp||e.target.closest?.('#dp'))return;
+  const f=dp.input.getBoundingClientRect(),c=e.target.getBoundingClientRect?e.target.getBoundingClientRect():{top:0,bottom:innerHeight};
+  if(f.bottom<c.top||f.top>c.bottom||f.bottom<0||f.top>innerHeight)closeDp(false);else dpPlace()},true);
 window.addEventListener('resize',()=>{if(dp)closeDp(false)});
