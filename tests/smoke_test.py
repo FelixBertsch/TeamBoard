@@ -6,7 +6,7 @@ End-to-end test for the Teamboard (Python 3 + Playwright with Chromium).
 Checks: demo mode, quick capture, views, todo markers with hover card, two-week view, calendar, holidays per state, drag-to-create, undo; GitHub sync against a mocked API
 (setup with repository detection, encryption, second device, merge of concurrent edits, offline start from cache, tour from a connected board);
 then per viewport (27", 13", iPhone portrait and landscape): no JS errors, no horizontal overflow,
-the main flows (touch on iPhone) and screenshots in tests/screenshots/.
+the main flows (touch on iPhone, incl. the team grid and moving a topic by hold and drag) and screenshots in tests/screenshots/.
 """
 import base64, functools, hashlib, http.server, json, pathlib, sys, threading
 from playwright.sync_api import sync_playwright
@@ -113,10 +113,10 @@ def phone_flows(pg, name, w, h):
     go(pg, "uebersicht")
     c(pg.inner_text("h1") == "Heute" and pg.locator(".grp.late").count() == 1, "today and overdue visible")
     c(pg.locator(".away").count() > 0, "absent people visible")
-    small = pg.evaluate("""()=>[...document.querySelectorAll('.lay-phone .check,.tab-i,.tab-plus,.away:not(.badge)')].filter(e=>{const r=e.getBoundingClientRect();
+    small = pg.evaluate("""()=>[...document.querySelectorAll('.lay-phone .check,.tab-i,.tab-plus,.away:not(.badge),.fold-t,.grp-f')].filter(e=>{const r=e.getBoundingClientRect();
       const s=getComputedStyle(e,'::before');const ext=s.content!=='none'?20:0;return r.width>0&&(Math.min(r.width,r.height)+ext)<44}).length""")
     c(small == 0, "tap targets at least 44 px")
-    tap('.tab-i[href="#team"]'); tap('.pcard-top[href="#ma-lena"]')
+    tap('.tab-i[href="#team"]'); tap('#main a[href="#ma-lena"]')
     c(pg.inner_text("h1") == "Lena Hoffmann", "open person via Team")
     # create todo with + and chips
     tap(".tab-plus")
@@ -138,7 +138,7 @@ def phone_flows(pg, name, w, h):
     c(pg.locator('#dform input[name=kind][value=Krank]').is_checked() and pg.locator('#dform select[name=personId]').input_value() == "aylin", "#krank opens the prefilled absence form")
     tap('#dform button[type=submit]')
     c(state(pg, f"S.absences.some(a=>a.personId==='aylin'&&a.kind==='Krank'&&a.start===a.end)"), "sick day via the sheet")
-    go(pg, "team"); tap('.pcard-top[href="#ma-jonas"]')
+    go(pg, "team"); tap('#main a[href="#ma-jonas"]')
     tap(f'.todo-title[data-id="{tid}"]')
     pg.locator('#dform [name=title]').fill("Telefon Aufgabe geändert"); tap('#dform button[type=submit]')
     c(state(pg, f"S.todos.find(t=>t.id==='{tid}').title") == "Telefon Aufgabe geändert", "edit todo in sheet")
@@ -169,6 +169,80 @@ def phone_flows(pg, name, w, h):
     pg.set_viewport_size({"width": h, "height": w}); pg.wait_for_timeout(400)
     c(pg.evaluate("document.body.classList.contains('drawer-open')") and pg.input_value("#capText") == "Im Blatt", "rotation keeps the open sheet")
     pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(300)
+    today_folds(pg, name); team_grid(pg, name, w, h)
+
+def touch_drag(pg, x, y, dx, hold=600):
+    """Touch at (x, y), hold `hold` ms, then move by dx in steps and lift (CDP touch events, like a finger)."""
+    cdp = pg.context.new_cdp_session(pg)
+    ev = lambda t, px=0, py=0: cdp.send("Input.dispatchTouchEvent", {"type": t, "touchPoints": [] if t == "touchEnd" else [{"x": px, "y": py}]})
+    ev("touchStart", x, y); pg.wait_for_timeout(hold)
+    for i in range(1, 7): ev("touchMove", x + dx * i / 6, y + (2 if hold < 100 else 0)); pg.wait_for_timeout(25)
+    ev("touchEnd"); pg.wait_for_timeout(250); cdp.detach()
+
+def today_folds(pg, name):
+    """Phone "Heute": cards fold with a summary, the state survives a reload, a new red issue opens "Zu klären" again."""
+    c = lambda cond, msg: check(cond, f"[{name}] {msg}")
+    tap = lambda sel: (pg.locator(sel).first.tap(), pg.wait_for_timeout(150))
+    go(pg, "uebersicht")
+    c(pg.locator("text=Projekte heute").count() == 0, "Heute without the projects panel")
+    c(pg.locator(".fold.open .grp.late").count() == 1 and pg.locator(".grp-f[data-v=week]").count() == 1 and pg.locator(".todo:has-text('Partner-Sandbox')").count() == 0,
+      "todos: overdue and today open, the rest of the week folded")
+    tap(".grp-f[data-v=week]")
+    c(pg.locator(".todo:has-text('Partner-Sandbox')").count() == 1, "a folded todo group opens")
+    c(pg.locator(".fold:not(.open) .fold-t[data-v=abs]").count() == 1 and "abwesend" in pg.inner_text(".fold-t[data-v=abs] .fold-s"), "Abwesenheiten folded with a summary")
+    tap(".fold-t[data-v=abs]")
+    c(pg.locator(".fold.open .prow[data-action=edit-absence]").count() > 0 and pg.locator(".fold-h [data-action=new-absence]").count() == 1, "a card opens with its rows and action")
+    tap(".fold-t[data-v=issues]")
+    c(pg.locator(".fold.open .fold-t[data-v=issues]").count() == 0, "Zu klären folds")
+    pg.reload(); pg.wait_for_timeout(400); go(pg, "uebersicht")
+    c(pg.locator(".fold.open .fold-t[data-v=abs]").count() == 1 and pg.locator(".fold.open .fold-t[data-v=issues]").count() == 0, "folding survives a reload")
+    pg.evaluate("S=TB.state();S.topics.push(newEntry({personId:'aylin',title:'Altlast',start:ds(TDN-9),end:ds(TDN-2),status:'aktiv',note:''}));save();render()")
+    c(pg.locator(".fold.open .fold-t[data-v=issues]").count() == 1 and "dringend" in pg.inner_text(".fold-t[data-v=issues] .fold-s"), "a new red issue opens Zu klären")
+    pg.evaluate("localStorage.removeItem('teamboard.v1.ui')"); pg.reload(); pg.wait_for_timeout(400)
+
+def team_grid(pg, name, w, h):
+    """Phone team grid: upright one week with day list, sideways two weeks in a scroller; hold and drag moves a topic."""
+    c = lambda cond, msg: check(cond, f"[{name}] {msg}")
+    tap = lambda sel: (pg.locator(sel).first.tap(), pg.wait_for_timeout(150))
+    go(pg, "team"); pg.evaluate("document.querySelectorAll('.banner').forEach(e=>e.remove())")
+    rows = pg.locator(".wg-r:not(.wg-h)").count()
+    c(rows == 1 + state(pg, "S.people.filter(p=>!p.archived).length"), "team grid: one row per person and me")
+    dw = pg.evaluate("document.querySelector('.wg-c').getBoundingClientRect().width")
+    topic = "Redesign Kundenportal"; span = lambda: state(pg, f"(t=>t.start+' '+t.end)(S.topics.find(t=>t.title==='{topic}'))")
+    if w < h:
+        c(pg.locator(".wg-d").count() == 5 and dw > 50, f"upright: five workdays, {dw:.0f} px per day")
+        tap(".wg-d >> nth=2")
+        c(pg.inner_text(".dday h2").startswith("Mittwoch"), "tap on a day shows it below")
+        c("off" in pg.locator(".dd").last.get_attribute("class") and pg.locator(".dd.off").count() >= 1, "absent people at the end of the day list")
+        kw = pg.inner_text(".wk-l b"); tap(".wk-nav [data-v='1']")
+        c(pg.inner_text(".wk-l b") != kw and pg.locator(".wk-nav [data-v='0']").count() == 1, "next week")
+        tap(".wk-nav [data-v='0']")
+        c(pg.inner_text(".wk-l b") == kw, "back to this week")
+    else:
+        c(pg.locator(".wg-land").count() == 1 and not pg.locator(".tab-plus").is_visible(), "sideways: scroller, tab bar hidden")
+        cw = pg.evaluate("document.querySelector('.wg-land').clientWidth")
+        c(abs(dw * 10 + 46 - cw) < 4, f"sideways: ten workdays visible ({dw:.0f} px per day)")
+        x0 = pg.evaluate("document.querySelector('.wg-land').scrollLeft")
+        c(abs(x0 - dw * 10) < 4, "sideways: starts at the current week")
+        pg.evaluate("document.querySelector('.wg-land').scrollLeft=333"); pg.wait_for_timeout(80); pg.evaluate("render()")
+        c(pg.evaluate("document.querySelector('.wg-land').scrollLeft") == 333, "render() keeps the scroll position")
+        pg.evaluate(f"document.querySelector('.wg-land').scrollLeft={x0}"); pg.wait_for_timeout(80)
+    before = span(); bar = pg.locator(".wg-b[data-move]", has_text=topic).first
+    bb = bar.bounding_box(); x = max(bb["x"], 80) + 16; y = bb["y"] + bb["height"] / 2
+    touch_drag(pg, x, y, -dw * 1.5, hold=60)
+    c(span() == before and pg.evaluate("!document.body.classList.contains('drawer-open')"), "a swipe over a bar does not move it")
+    if w > h: pg.wait_for_timeout(600); pg.evaluate(f"document.querySelector('.wg-land').scrollLeft={x0}"); pg.wait_for_timeout(150)
+    bb = bar.bounding_box(); x = max(bb["x"], 80) + 16; y = bb["y"] + bb["height"] / 2
+    touch_drag(pg, x, y, dw * 1.2)
+    c(span() != before and span().split()[0] > before.split()[0] and pg.evaluate("!document.body.classList.contains('drawer-open')") and "Rückgängig" in pg.inner_text("#toast"),
+      f"hold and drag moves a topic by a workday ({before} to {span()})")
+    c(all(pg.evaluate(f"[0,6].includes(wdOf(dn('{d}')))") is False for d in span().split()), "the moved topic does not land on a weekend")
+    tap("#toast [data-action=undo]")
+    c(span() == before, "undo the move")
+    shot(pg, name, "team-grid")
+    pg.locator(".wg-b[data-move]", has_text=topic).first.tap(); pg.wait_for_timeout(200)
+    c(pg.evaluate("document.body.classList.contains('drawer-open')"), "a tap on a bar opens the topic")
+    tap("#drawer [data-action=close-drawer]")
 
 def tour_flow(pg, name, touch):
     """Runs the tour on sample data: every highlight and card inside the viewport, screenshots of some steps."""

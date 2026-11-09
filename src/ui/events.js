@@ -3,6 +3,7 @@ let suppressUntil=0;
 document.addEventListener('click',async e=>{
   const a=e.target.closest('[data-action]');
   if(a){const id=a.dataset.id;
+    if(a.matches('.wg-b')&&Date.now()<suppressUntil)return; // the click after moving a bar in the phone grid
     switch(a.dataset.action){
       case'close-drawer':closeDrawer();break;
       case'date-pick':openDp(a);break;
@@ -34,6 +35,10 @@ document.addEventListener('click',async e=>{
         const next=completeTodo(t);save();render();toast(next?`Erledigt. Nächste fällig ${dueLabel(next.due)}`:`Erledigt: ${t.title}`,true);break}
       case'talk-done':{const t=S.talks.find(x=>x.id===id);if(!t)break;t.done=true;t.doneAt=TODAY;save();render();toast('Als besprochen markiert',true);break}
       case'talk-del':S.talks=S.talks.filter(x=>x.id!==id);save();render();toast('Punkt gelöscht',true);break;
+      case'team-day':ui.tday=+a.dataset.v;render();break;
+      case'team-week':ui.toff=+a.dataset.v?ui.toff+(+a.dataset.v):0;ui.tday=null;render();break;
+      case'fold':{const k=a.dataset.v;ui.fold[k]=!ui.fold[k];if(k==='issues'&&!ui.fold[k])ui.redSeen=redKeys();saveUi();render();break}
+      case'fold-grp':ui.grp[a.dataset.v]=!ui.grp[a.dataset.v];render();break;
       case'filter':ui.filter=a.dataset.v;ui.more=false;render();break;
       case'tab':ui.tab[route().id]=a.dataset.v;ui.showDone=false;render();break;
       case'range':ui.range=a.dataset.v;ui.off=0;saveUi();render();break;

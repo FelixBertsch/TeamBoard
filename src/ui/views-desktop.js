@@ -60,13 +60,17 @@ function absBlocks(list){const out=[];
 /* "Abwesenheiten" on the overview: the next block of every person (running or upcoming), "Mehr anzeigen" lists all future blocks.
    A click opens the block's first entry. */
 function absencePanel(){
-  const blocks=absBlocks(S.absences.filter(a=>a.end>=TODAY&&isActive(a.personId)).sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end)));
+  return`<section class="card card-pad"><div class="panel-head"><h2 class="h4">Abwesenheiten</h2><button class="link-btn" data-action="new-absence">Eintragen</button></div>${absenceRows()}</section>`;
+}
+/* Rows of absencePanel(), also the body of the folding card on the phone. */
+function absenceBlocks(){return absBlocks(S.absences.filter(a=>a.end>=TODAY&&isActive(a.personId)).sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end)))}
+function absenceRows(){
+  const blocks=absenceBlocks();
   const next=blocks.filter((b,i)=>blocks.findIndex(x=>x.personId===b.personId)===i),more=blocks.length-next.length;
   const row=b=>{const p=personOf(b.personId),now=b.start<=TODAY,n=b.ids.length;
     return`<button class="prow" data-action="edit-absence" data-id="${b.ids[0]}">${avatar(p,'xs')}<span class="pt">${esc(p.id==='me'?'Ich':firstName(p))}, ${esc(absLabel(b.kind))}${n>1?`<span class="pn">, ${n} Einträge</span>`:''}</span><span class="pd">${now?'<span class="dot"></span>bis '+dm(b.end):dm(b.start)+' bis '+dm(b.end)}</span></button>`};
-  return`<section class="card card-pad"><div class="panel-head"><h2 class="h4">Abwesenheiten</h2><button class="link-btn" data-action="new-absence">Eintragen</button></div>
-    ${blocks.length?(ui.absAll?blocks:next).map(row).join(''):'<p class="empty">Niemand ist abwesend, und es ist keine Abwesenheit geplant.</p>'}
-    ${more?`<button type="button" class="link-btn abs-more" data-action="abs-more" aria-expanded="${!!ui.absAll}">${ui.absAll?'Weniger anzeigen':`Mehr anzeigen (${more})`}</button>`:''}</section>`;
+  return`${blocks.length?(ui.absAll?blocks:next).map(row).join(''):'<p class="empty">Niemand ist abwesend, und es ist keine Abwesenheit geplant.</p>'}
+    ${more?`<button type="button" class="link-btn abs-more" data-action="abs-more" aria-expanded="${!!ui.absAll}">${ui.absAll?'Weniger anzeigen':`Mehr anzeigen (${more})`}</button>`:''}`;
 }
 /* "Projekte heute": who works where, grouped by project; internal assignments marked. */
 function projectsPanel(){
@@ -91,11 +95,12 @@ function assignmentsPanel(id){
     ${list.length?list.map(a=>{const [c,l]=st[rank(a)];return`<button class="prow" data-action="edit-assignment" data-id="${a.id}"><span class="st ${c}">${l}</span><span class="pt">${esc(a.project)}</span><span class="pd">${when(a)}${a.billable?'':' · intern'}</span></button>`}).join('')
       :'<p class="empty">Noch keinem Projekt zugeordnet. „Zuordnen“ trägt Kunde und Zeitraum ein.</p>'}</section>`;
 }
+const talkCounts=()=>team().map(p=>({p,n:S.talks.filter(t=>t.personId===p.id&&!t.done).length})).filter(x=>x.n);
 function talkCountPanel(){
-  const talkCounts=team().map(p=>({p,n:S.talks.filter(t=>t.personId===p.id&&!t.done).length})).filter(x=>x.n);
-  return`<section class="card card-pad"><div class="panel-head"><h2 class="h4">Fürs nächste Gespräch</h2></div>
-    ${talkCounts.length?talkCounts.map(({p,n})=>`<a class="prow" href="${hrefOf(p.id)}">${avatar(p,'xs')}<span class="pt">${esc(p.name)}</span><span class="pd">${n===1?'ein Punkt':n+' Punkte'}</span></a>`).join(''):'<p class="empty">Noch nichts gesammelt. Punkte notierst du auf der Seite des Mitarbeiters.</p>'}</section>`;
+  return`<section class="card card-pad"><div class="panel-head"><h2 class="h4">Fürs nächste Gespräch</h2></div>${talkRows()}</section>`;
 }
+function talkRows(){const list=talkCounts();
+  return list.length?list.map(({p,n})=>`<a class="prow" href="${hrefOf(p.id)}">${avatar(p,'xs')}<span class="pt">${esc(p.name)}</span><span class="pd">${n===1?'ein Punkt':n+' Punkte'}</span></a>`).join(''):'<p class="empty">Noch nichts gesammelt. Punkte notierst du auf der Seite des Mitarbeiters.</p>'}
 function viewOverview(banner=''){
   return`<div class="wrap">${banner}<div class="page-head"><div><p class="overline">${esc(todayOverline())}</p><h1>Übersicht</h1><p class="lead">${esc(overviewHeadline())}</p></div>
     <div class="actions"><button class="btn secondary" data-action="new-absence">Abwesenheit eintragen</button><button class="btn accent" data-action="new-topic">${ic('plus',18,2.5)}Thema anlegen</button></div></div>

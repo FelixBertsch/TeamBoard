@@ -1,5 +1,6 @@
 /* Pointer interactions on the timeline. Bars: move or resize. Todo cards: drop on a day or person.
-   Empty area: drag a range, then type a title and press Enter. All share one `drag` object with a `type`. */
+   Empty area: drag a range, then type a title and press Enter. All share one `drag` object with a `type`.
+   Phone grid (views-phone.js): hold a bar, then drag it by workdays (type 'grid', see gridDown()). */
 let drag=null,hoverTrack=null;
 function showGhost(track,a,b,label,creating=false){const g=track.querySelector('.tl-ghost');if(!g)return;
   const lo=Math.max(Math.min(a,b),T.start),hi=Math.min(Math.max(a,b),T.end),ca=colOf(lo),cb=colOf(hi);
@@ -51,6 +52,7 @@ document.addEventListener('pointerdown',e=>{
   const pending=document.querySelector('.tl-new input');
   if(pending&&!e.target.closest('.tl-new')){pending.blur();suppressUntil=Date.now()+300;return}
   if(e.button!==0||e.target.closest('.mini-check,.tl-new,.abs-label,.wbar'))return;
+  const gb=e.target.closest('.wg-b[data-move]');if(gb){gridDown(e,gb);return}
   const chip=e.target.closest('.tchip,.tmark[data-todo]');
   if(!chip&&e.target.closest('.tmark'))return; // several todos: a click pins the list (events.js)
   if(chip){const t=S.todos.find(x=>x.id===chip.dataset.todo);if(!t)return;
@@ -64,6 +66,7 @@ document.addEventListener('pointerdown',e=>{
   if(track&&e.pointerType!=='touch'){drag={type:'create',track,x0:e.clientX,y0:e.clientY,d0:dayAt(track,e.clientX),moved:false};track.setPointerCapture(e.pointerId);e.preventDefault()}
 });
 document.addEventListener('pointermove',e=>{
+  if(drag?.type==='grid'){gridMove(e);return}
   if(drag){
     const dx=e.clientX-drag.x0,dy=drag.type==='todo'?e.clientY-drag.y0:0;
     if(!drag.moved&&Math.hypot(dx,dy)<6)return;if(!drag.moved)hidePop();drag.moved=true;
@@ -88,6 +91,7 @@ document.addEventListener('pointermove',e=>{
     const day=dayAt(track,e.clientX);T.fine?showGhost(track,day,day,'Klick: Aufgabe, ziehen: Thema'):showGhost(track,day,Math.min(day+4,T.end),'Klick oder ziehen: Thema')}
 });
 document.addEventListener('pointerup',()=>{
+  if(drag?.type==='grid'){gridUp();return}
   if(!drag)return;const d=drag;drag=null;
   if(d.type==='create'){if(d.moved){suppressUntil=Date.now()+300;inlineCreate(d.track,d.d0,d.d1??d.d0)}else hideGhost(d.track);return}
   suppressUntil=Date.now()+300;
@@ -100,7 +104,37 @@ document.addEventListener('pointerup',()=>{
   }
   if(d.moved){save();render();toast(`${d.t.title}: ${dm(d.t.start)} bis ${dm(d.t.end)}`,true)}else openTopic(d.t.id);
 });
-document.addEventListener('pointercancel',()=>{if(!drag)return;const d=drag;drag=null;if(d.snap)S=JSON.parse(d.snap);render()});
+document.addEventListener('pointercancel',()=>{if(!drag)return;const d=drag;drag=null;clearTimeout(d.timer);clearInterval(d.auto);
+  if(d.type==='grid'&&!d.active)return; // the browser took the touch for scrolling before the hold was complete
+  document.body.classList.remove('grid-drag');if(d.snap)S=JSON.parse(d.snap);render()});
+
+/* Phone grid: a bar has to be held for GRID_HOLD ms without moving before it lifts; moving earlier is a scroll and
+   cancels, a short tap is a click and opens the topic. While lifted, the columns the finger moved shift start and end by as
+   many workdays (weekends skipped, so a topic never lands on a weekend). Near the edge of the sideways grid it scrolls along.
+   The non-passive touchmove handler keeps page and grid from scrolling while a bar is lifted. */
+const GRID_HOLD=450;
+const wdShift=(d,k)=>{let n=d;const s=Math.sign(k);for(let i=0;i<Math.abs(k);){n+=s;if(wdOf(n)!==0&&wdOf(n)!==6)i++}return n};
+function gridCol(d,x){const r=d.track.getBoundingClientRect();return Math.floor((x-r.left)/(r.width/d.n))}
+function gridDown(e,bar){const t=S.topics.find(x=>x.id===bar.dataset.id),grid=bar.closest('[data-mon]');if(!t||!grid)return;
+  drag={type:'grid',t,el:bar,grid,track:bar.parentElement,mon:+grid.dataset.mon,n:+grid.dataset.n,x0:e.clientX,y0:e.clientY,x:e.clientX,
+    s0:dn(t.start),e0:dn(t.end),k:0,active:false,snap:snapshot(),pid:e.pointerId};
+  drag.timer=setTimeout(()=>{const d=drag;if(d?.type!=='grid'||!d.el.isConnected)return;d.active=true;d.c0=gridCol(d,d.x);
+    try{d.el.setPointerCapture(d.pid)}catch(err){}
+    d.el.classList.add('lifted');document.body.classList.add('grid-drag');d.label=d.el.querySelector('span:last-child');d.text=d.label?.textContent;
+    gridShow(d);const sc=d.grid.classList.contains('wg-land')?d.grid:null;
+    if(sc)d.auto=setInterval(()=>{const r=sc.getBoundingClientRect(),v=d.x>r.right-48?12:d.x<r.left+92?-12:0;if(v){sc.scrollLeft+=v;gridMove({clientX:d.x,clientY:0})}},40)},GRID_HOLD)}
+function gridMove(e){const d=drag;d.x=e.clientX;
+  if(!d.active){if(e.clientY&&Math.hypot(e.clientX-d.x0,e.clientY-d.y0)>8){clearTimeout(d.timer);drag=null}return}
+  const k=gridCol(d,e.clientX)-d.c0;if(k===d.k)return;d.k=k;
+  d.t.start=ds(wdShift(d.s0,k));d.t.end=ds(wdShift(d.e0,k));gridShow(d)}
+function gridShow(d){const a=colStart(dn(d.t.start),d.mon),b=colEnd(dn(d.t.end),d.mon),s=Math.max(a,0),e=Math.min(b,d.n-1);
+  if(s<=e){d.el.style.left=`calc(${gx(s)} + 2px)`;d.el.style.width=`calc(${gx(e-s+1)} - 4px)`}
+  if(d.label)d.label.textContent=`${WD[wdOf(dn(d.t.start))]} ${dm(d.t.start)} bis ${WD[wdOf(dn(d.t.end))]} ${dm(d.t.end)}`}
+function gridUp(){const d=drag;drag=null;clearTimeout(d.timer);clearInterval(d.auto);if(!d.active)return; // a tap: the click opens the topic
+  suppressUntil=Date.now()+400;document.body.classList.remove('grid-drag');
+  if(d.k){save();render();toast(`${d.t.title}: ${WD[wdOf(dn(d.t.start))]} ${dm(d.t.start)} bis ${WD[wdOf(dn(d.t.end))]} ${dm(d.t.end)}`,true)}else render()}
+document.addEventListener('touchmove',e=>{if(drag?.type==='grid'&&drag.active)e.preventDefault()},{passive:false});
+document.addEventListener('contextmenu',e=>{if(e.target.closest?.('.wg-b'))e.preventDefault()});
 /* Hover card of todo cards and markers (showPop()/hidePop() in timeline.js): hover with a short delay, keyboard focus, closes on leaving, outside click or scroll. */
 let hoverTimer=0;
 document.addEventListener('pointerover',e=>{if(e.pointerType==='touch'||drag)return;

@@ -16,7 +16,7 @@ It runs as a static web app (GitHub Pages) on three kinds of devices: a large mo
 - **Design:** own tokens in `styles/tokens.css` (navy, coral, Nunito Sans), light theme only. See "Design".
 - **Browsers:** current Chrome/Edge on Windows, Safari on iPhone (fully supported).
 - **Public repository:** no user data, no personal names, e-mail addresses, repository names or URLs of a specific user, in code, docs, tests or commits. The pre-commit hook (`.githooks/pre-commit`) blocks JSON files, data folders and GitHub tokens. Sample data uses invented people and companies.
-- **Deliberately not included:** multiple users, own server, notifications, calendar integration. On the phone: timeline with dragging, drag-to-create, keyboard shortcuts. No tablet layout. Discuss with the maintainer before adding any of these.
+- **Deliberately not included:** multiple users, own server, notifications, calendar integration. On the phone: resizing topics by dragging, drag-to-create, keyboard shortcuts (moving a topic by hold and drag in the team grid is included). No tablet layout. Discuss with the maintainer before adding any of these.
 - **Settled questions** are listed under "Decisions". Do not reopen them without a new reason.
 
 ## Working on this repo
@@ -73,7 +73,7 @@ Three rules follow:
 
 | Area | `layoutKey()` | Class | Applies | Test viewports |
 | --- | --- | --- | --- | --- |
-| Phone | `phone` | `lay-phone` | below 700 px wide, or touch and below 500 px high | 440 × 956, 393 × 852, 956 × 440 |
+| Phone | `phone` | `lay-phone` (+ `lay-land` when wider than high) | below 700 px wide, or touch and below 500 px high | 440 × 956, 393 × 852, 956 × 440 |
 | Laptop | `rail` | `lay-rail` | 700 to 1439 px | 1280 × 800, 1280 × 700 |
 | Monitor | `side` | none | from 1440 px | 1920 × 1080, 2560 × 1440 |
 
@@ -81,9 +81,9 @@ Plus `touch` for a coarse pointer.
 
 - **Monitor:** 264 px sidebar. At the bottom: "Mehr" (contacts, backups, holidays, tour, sign-out), the shortcut list (`KEYS`) and the sync status. From 1800 px the right-column panels flow into two columns, from 2200 px into three.
 - **Laptop:** the sidebar becomes a 76 px icon bar (avatars with counters, absence dot, name as `title`). Sync status as a dot; the shortcut list only in "Mehr".
-- **Phone:** own views with the same data, actions and forms. Bottom tab bar: Heute, Team, "+", Ich, Mehr. Forms are bottom sheets. The page scrolls as a whole. Tap targets at least 44 px, inputs at least 16 px font, safe areas via `env(safe-area-inset-*)`.
+- **Phone:** own views with the same data, actions and forms. Bottom tab bar: Heute, Team, "+", Ich, Mehr. Forms are bottom sheets. The page scrolls as a whole. Tap targets at least 44 px, inputs at least 16 px font, safe areas via `env(safe-area-inset-*)`. "Heute" has folding cards; "Team" is a grid of workdays (one week upright with the tapped day listed below; sideways, class `lay-land`, two weeks visible in a horizontal scroller without the tab bar). Topic bars there move by hold and drag. Details in `docs/ui.md` and `docs/timeline.md`.
 - **Resize and rotation:** `applyLayout()` runs at once, `render()` only when width or layout area changes. Height-only changes (Safari's address bar, keyboard) never re-render.
-- Decide layout differences via `.lay-phone`/`.lay-rail` and `isPhone()`/`layoutKey()`, never via own media queries. Only wide monitors use `@media (min-width:1800px)` and `2200px`.
+- Decide layout differences via `.lay-phone`/`.lay-rail`/`.lay-land` and `isPhone()`/`isLand()`/`layoutKey()`, never via own media queries. Only wide monitors use `@media (min-width:1800px)` and `2200px`.
 
 ## Design
 
@@ -164,6 +164,9 @@ Each with its date and reason, so they are not reopened without a new argument.
 - **Tour on sample data** (8.11.2026): a tour across an empty board explains nothing. No tour library.
 - **Absence warnings only where the finish of a main topic is at risk** (9.11.2026): long topics that run on the side collected one warning per day off. Topics are main or side topics (`side`); side topics get no absence warnings, main topics only for an absence on the end date or the three workdays before it, or absences over more than half of the remaining workdays. One entry per topic.
 - **Acknowledge per warning, not per absence** (9.11.2026): a yellow "Zu klären" entry can be marked as clarified and comes back when its date or its absences change. Red entries (late) cannot be hidden, because they mean the data is wrong.
+- **Phone team view as a grid of workdays, not a strip per person** (9.11.2026, replaces the two-week strip per person of 7.11.): separate cards with their own unlabelled time axis made it hard to see who works on what on which day. Upright one week (two weeks would leave 34 px per day), the tapped day listed below; sideways two weeks with free horizontal scrolling. A web app cannot force landscape on iOS, so turning the phone switches the view.
+- **Moving topics on the phone by hold and drag** (9.11.2026): the maintainer wants it, and the 60 to 90 px columns are wide enough. Hold first, because swiping is scrolling and the grid is mostly bars. Start and end shift by workdays. Resizing and drag-to-create stay desktop only: thumb-sized edges are too fiddly, the form changes the length.
+- **Folding cards on the phone's "Heute", not closing** (9.11.2026): a closed card hides news such as a new absence; a folded one keeps a summary in its head. "Zu klären" opens again for a new red issue. "Projekte heute" left the phone, the project shows per person in the team day list.
 - **Rarely used functions under "Mehr"** (8.11.2026): contacts, backups, holidays, tour and sign-out sit in "Mehr" on every layout. The sidebar keeps navigation, the team, the shortcut list and the sync status; the repository name shows only in the tooltip and in "Mehr".
 
 ## Pitfalls
@@ -181,4 +184,5 @@ Each with its date and reason, so they are not reopened without a new argument.
 - **Date fields** are always `dateIn()`, never a bare `<input type="date">` (Chrome and Edge show it in the browser language).
 - **New pointer logic on the timeline** must set `suppressUntil` after a drag, so the following click does not open a form.
 - **The tour layer (`#tour`) takes every click and key** while it runs and counts as `Store.busy()`.
-- **Never put user data into `localStorage`.** Only `teamboard.v1.ui` (timeline range) and `teamboard.v1.tour` live there.
+- **Never put user data into `localStorage`.** Only `teamboard.v1.ui` (timeline range, folded cards on the phone) and `teamboard.v1.tour` live there.
+- **Class `lg` is taken** by the large avatar (`.av.lg`); the sideways team grid is `.wg-land`.

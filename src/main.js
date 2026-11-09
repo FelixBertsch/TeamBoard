@@ -1,5 +1,5 @@
 /* Entry point: global browser events, startup, offline support. Loaded last. */
-window.addEventListener('hashchange',()=>{closeDrawer(false);ui.showDone=false;$('#main').scrollTop=0;window.scrollTo(0,0);render()});
+window.addEventListener('hashchange',()=>{closeDrawer(false);ui.showDone=false;ui.lgX=null;$('#main').scrollTop=0;window.scrollTo(0,0);render()});
 /* Resize and rotation: re-render only if width or layout area changed, never on height-only changes
    (Safari changes the height when its address bar slides in and out). render() restores open inputs. */
 let rz;

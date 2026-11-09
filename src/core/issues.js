@@ -52,11 +52,17 @@ function ackIssue(ack){const all=allIssues(),i=all.find(x=>x.ack===ack);if(!i)re
   S.acks=(S.acks||[]).filter(a=>a.id!==ack&&all.some(x=>x.ack===a.id));S.acks.push({id:ack,sig:i.sig,items:i.items||[],at:TODAY});return true}
 /* Panel: open issues with a check button on yellow ones; "n geklärte anzeigen" lists acknowledged ones muted, to bring them back. */
 function issuesPanel(pid){
-  const all=allIssues(pid),open=all.filter(i=>!isAcked(i)),done=all.filter(isAcked);if(!all.length)return'';
+  if(!allIssues(pid).length)return'';
+  return`<section class="card card-pad" data-tour="issues"><div class="panel-head"><h2 class="h4">Zu klären</h2>${issuesToggle(pid)}</div>${issuesBody(pid)}</section>`;
+}
+/* Head button "n geklärte anzeigen" and the rows of issuesPanel(); the phone's folding card uses them separately. */
+function issuesToggle(pid){const done=allIssues(pid).filter(isAcked);
+  return done.length?`<button type="button" class="link-btn" data-action="show-acked" aria-expanded="${!!ui.showAcked}">${ui.showAcked?'Geklärte ausblenden':done.length===1?'1 geklärte anzeigen':`${done.length} geklärte anzeigen`}</button>`:''}
+function issuesBody(pid){
+  const all=allIssues(pid),open=all.filter(i=>!isAcked(i)),done=all.filter(isAcked);
   const row=i=>{const p=personOf(i.pid),acked=isAcked(i);
     return`<div class="prow issue${acked?' acked':''}"><button type="button" class="issue-open" data-action="${i.act}" data-id="${i.id}">${pid?'':avatar(p,'xs')}<span class="pt">${esc(i.text)}</span>${acked?'':ic('alert',16).replace('class="ic"',`class="ic ${i.kind}"`)}</button>`
       +(acked?`<button type="button" class="link-btn" data-action="unack-issue" data-id="${i.ack}">Wieder anzeigen</button>`
         :i.ack?`<button type="button" class="icon-btn ack" data-action="ack-issue" data-id="${i.ack}" aria-label="Als geklärt markieren: ${esc(i.text)}" title="Als geklärt markieren">${ic('check',18)}</button>`:'<span class="ack-sp" aria-hidden="true"></span>')+'</div>'};
-  return`<section class="card card-pad" data-tour="issues"><div class="panel-head"><h2 class="h4">Zu klären</h2>${done.length?`<button type="button" class="link-btn" data-action="show-acked" aria-expanded="${!!ui.showAcked}">${ui.showAcked?'Geklärte ausblenden':done.length===1?'1 geklärte anzeigen':`${done.length} geklärte anzeigen`}</button>`:''}</div>
-    ${open.length?open.map(row).join(''):'<p class="empty">Alles geklärt.</p>'}${ui.showAcked?done.map(row).join(''):''}</section>`;
+  return`${open.length?open.map(row).join(''):'<p class="empty">Alles geklärt.</p>'}${ui.showAcked?done.map(row).join(''):''}`;
 }

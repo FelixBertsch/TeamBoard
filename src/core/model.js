@@ -62,7 +62,7 @@ const undoStack=[];let lastSaved=null;
 function save(){const now=JSON.stringify(S);if(lastSaved!==null&&lastSaved!==now){undoStack.push(lastSaved);if(undoStack.length>CFG.undoSteps)undoStack.shift()}lastSaved=now;Store.changed()}
 function undo(){if(!undoStack.length){toast('Nichts mehr rückgängig zu machen');return}const prev=undoStack.pop();S=JSON.parse(prev);lastSaved=prev;Store.changed();
   if(location.hash.startsWith('#ma-')&&!S.people.some(p=>'#ma-'+p.id===location.hash))location.hash='uebersicht';render();toast('Rückgängig gemacht')}
-function saveUi(){try{localStorage.setItem(KEY+'.ui',JSON.stringify({range:ui.range}))}catch(e){}}
+function saveUi(){try{localStorage.setItem(KEY+'.ui',JSON.stringify({range:ui.range,fold:ui.fold,redSeen:ui.redSeen}))}catch(e){}}
 const snapshot=()=>JSON.stringify(S);
 /* Clears the undo stack, e.g. after loading a new state from another device. */
 function resetUndo(){undoStack.length=0;lastSaved=snapshot()}
@@ -86,8 +86,11 @@ function setSetting(id,value){const x=S.settings.find(s=>s.id===id);if(x)x.value
 let S=empty();
 lastSaved=JSON.stringify(S);
 const ui={showAcked:false,absAll:false,filter:'alle',tab:{},forPid:'',off:0,range:['week','two','six'].includes(CFG.defaultView)?CFG.defaultView:'week',more:false,showDone:false,
-  hist:{type:'alle',pid:'',q:'',weeks:8},year:{}}; // hist: filters of the history view; year: review year per person
-try{const u=JSON.parse(localStorage.getItem(KEY+'.ui')||'{}');if(['week','two','six'].includes(u.range))ui.range=u.range}catch(e){}
+  hist:{type:'alle',pid:'',q:'',weeks:8},year:{}, // hist: filters of the history view; year: review year per person
+  fold:{todos:true,issues:true,abs:false,talk:false},redSeen:[],grp:{}, // phone "Heute": open cards, red issues seen when folding, open todo groups
+  toff:0,tday:null,lgX:null}; // phone team grid: week offset and tapped day upright, scroll position sideways
+try{const u=JSON.parse(localStorage.getItem(KEY+'.ui')||'{}');if(['week','two','six'].includes(u.range))ui.range=u.range;
+  if(u.fold&&typeof u.fold==='object')Object.assign(ui.fold,u.fold);if(Array.isArray(u.redSeen))ui.redSeen=u.redSeen}catch(e){}
 
 /* People: `S.people` is the team, including people who left (`archived` = date). `S.contacts` are people outside the team
    (boss, colleagues): never responsible for an entry, only mentioned in `with`. */

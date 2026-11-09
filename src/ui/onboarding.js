@@ -53,12 +53,12 @@ const TOUR={
     {hash:'uebersicht',title:'Jetzt dein Board',text:'',end:true}],
   phone:[
     {hash:'uebersicht',title:'Willkommen im Teamboard',text:'Der Rundgang zeigt dir Schritt für Schritt, wie das Teamboard auf dem Smartphone funktioniert. Er läuft auf Beispieldaten, deine eigenen Daten bleiben unberührt.'},
-    {hash:'uebersicht',sel:['.m-head'],title:'Heute',text:'Was ansteht, Überfälliges zuerst. Darunter siehst du, wer gerade fehlt, was zu klären ist und wer an welchem Projekt arbeitet.'},
+    {hash:'uebersicht',sel:['.m-head'],title:'Heute',text:'Was heute ansteht, Überfälliges zuerst. Darunter siehst du, wer gerade fehlt und was zu klären ist. Jede Karte klappt per Tipp auf und zu, ihr Kopf sagt, was drinsteckt.'},
     {hash:'uebersicht',sel:['.tab-plus'],title:'Erfassen',text:'Das Plus erfasst Aufgaben, Themen, Abwesenheiten und Gesprächspunkte. Schreib einfach: „@Lena Angebot prüfen bis Fr“. Mit #urlaub oder #krank wird daraus eine Abwesenheit, mit #monatlich eine wiederkehrende Aufgabe.'},
-    {hash:'uebersicht',sel:['.tab-i[href="#team"]'],title:'Team',text:'Das ganze Team auf zwei Wochen: Themen und Abwesenheiten je Person, dazu die Zahl offener Aufgaben.'},
+    {hash:'uebersicht',sel:['.tab-i[href="#team"]'],title:'Team',text:'Wer macht was: die Woche fürs ganze Team, darunter der gewählte Tag mit allen Themen. Halte ein Thema gedrückt und zieh es, um es zu verschieben. Quer gedreht siehst du zwei Wochen und wischst durch die Wochen.'},
     {hash:'ma-lena',sel:['[data-tour=talks]'],title:'Die Seite einer Person',text:'Tipp auf eine Person öffnet ihre Seite. „Fürs nächste Gespräch“ sammelt deine Punkte fürs nächste 1:1, darunter Projekte, Themen und Abwesenheiten.'},
     {hash:'uebersicht',sel:['.tab-i[href="#ich"]'],title:'Meine Planung',text:'Deine eigenen Aufgaben, deine To-dos zu Mitarbeitern und alles, worauf du wartest.'},
-    {hash:'uebersicht',sel:['.tab-i[data-action=more-menu]'],title:'Mehr',text:'Verlauf, Kontakte, Feiertage, Sicherung und dieser Rundgang. Die Planung mit Zeitleiste machst du am besten am Rechner, das Smartphone ist zum Nachschauen und schnellen Erfassen.'},
+    {hash:'uebersicht',sel:['.tab-i[data-action=more-menu]'],title:'Mehr',text:'Verlauf, Kontakte, Feiertage, Sicherung und dieser Rundgang. Große Planung geht am Rechner bequemer, das Smartphone ist zum Nachschauen, schnellen Erfassen und Verschieben.'},
     {hash:'uebersicht',title:'Jetzt dein Board',text:'',end:true}]};
 let tour=null; // {steps, i, back: mode before the tour, hash}
 const tourActive=()=>!!tour;
