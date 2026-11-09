@@ -49,10 +49,24 @@ function todoListHTML(f){
 }
 function filterTags(){const f=ui.filter,b=(v,l)=>`<button class="tag" data-action="filter" data-v="${v}" aria-pressed="${f===v}">${l}</button>`;
   return`<div class="tags" role="group" aria-label="Filter">${b('alle','Alle')}${b('team','Team')}${b('meine','Meine')}${b('wartet','Wartet auf')}</div>`}
+/* Absences of one person and kind that touch, overlap or are apart only by weekends and holidays form one block. People often
+   request leave in pieces (14.12. to 15.12., then 16.12. to 18.12.); the data keeps every entry, the overview shows 14.12. to 18.12.
+   Input sorted by start; blocks come out sorted by start: {personId, kind, start, end, ids}. */
+function absBlocks(list){const out=[];
+  for(const a of list){const b=out.findLast(x=>x.personId===a.personId&&x.kind===a.kind);
+    if(b){let d=dn(b.end)+1;while(d<dn(a.start)&&!isWorkday(d))d++;if(d>=dn(a.start)){if(a.end>b.end)b.end=a.end;b.ids.push(a.id);continue}}
+    out.push({personId:a.personId,kind:a.kind,start:a.start,end:a.end,ids:[a.id]})}
+  return out}
+/* "Abwesenheiten" on the overview: the next block of every person (running or upcoming), "Mehr anzeigen" lists all future blocks.
+   A click opens the block's first entry. */
 function absencePanel(){
-  const absList=S.absences.filter(a=>a.end>=TODAY&&dn(a.start)<=TDN+42&&isActive(a.personId)).sort((a,b)=>a.start.localeCompare(b.start));
+  const blocks=absBlocks(S.absences.filter(a=>a.end>=TODAY&&isActive(a.personId)).sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end)));
+  const next=blocks.filter((b,i)=>blocks.findIndex(x=>x.personId===b.personId)===i),more=blocks.length-next.length;
+  const row=b=>{const p=personOf(b.personId),now=b.start<=TODAY,n=b.ids.length;
+    return`<button class="prow" data-action="edit-absence" data-id="${b.ids[0]}">${avatar(p,'xs')}<span class="pt">${esc(p.id==='me'?'Ich':firstName(p))}, ${esc(absLabel(b.kind))}${n>1?`<span class="pn">, ${n} Einträge</span>`:''}</span><span class="pd">${now?'<span class="dot"></span>bis '+dm(b.end):dm(b.start)+' bis '+dm(b.end)}</span></button>`};
   return`<section class="card card-pad"><div class="panel-head"><h2 class="h4">Abwesenheiten</h2><button class="link-btn" data-action="new-absence">Eintragen</button></div>
-    ${absList.length?absList.map(a=>{const p=personOf(a.personId),now=a.start<=TODAY;return`<button class="prow" data-action="edit-absence" data-id="${a.id}">${avatar(p,'xs')}<span class="pt">${esc(p.id==='me'?'Ich':firstName(p))}, ${esc(absLabel(a.kind))}</span><span class="pd">${now?'<span class="dot"></span>bis '+dm(a.end):dm(a.start)+' bis '+dm(a.end)}</span></button>`}).join(''):'<p class="empty">In den nächsten sechs Wochen ist niemand abwesend.</p>'}</section>`;
+    ${blocks.length?(ui.absAll?blocks:next).map(row).join(''):'<p class="empty">Niemand ist abwesend, und es ist keine Abwesenheit geplant.</p>'}
+    ${more?`<button type="button" class="link-btn abs-more" data-action="abs-more" aria-expanded="${!!ui.absAll}">${ui.absAll?'Weniger anzeigen':`Mehr anzeigen (${more})`}</button>`:''}</section>`;
 }
 /* "Projekte heute": who works where, grouped by project; internal assignments marked. */
 function projectsPanel(){

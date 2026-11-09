@@ -289,6 +289,8 @@ h3{font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.02em;color:v
 .prow:first-child{border-top:0}
 .prow:hover .pt{color:var(--text-strong);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--border-default)}
 .prow .pt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow .pn{color:var(--text-muted);font-weight:400}
+.abs-more{margin-top:8px}
 .prow .pd{font-size:13px;color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .prow.issue .pt{white-space:normal;line-height:1.4}
 /* "Zu klären": the text opens the entry, the check button beside it acknowledges a yellow issue (always visible, also on touch) */

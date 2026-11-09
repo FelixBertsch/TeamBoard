@@ -360,6 +360,17 @@ with sync_playwright() as p:
     check(r["end"] and "kurz vor dem Ende im Urlaub" in r["end"] and "bis" not in r["end"] and len(r["rows"]) == 1, "a day off near the end shows once under Zu klären")
     check(r["side"] is None, "side topics get no absence warning")
     check(r["share"] and "an 8 von 15 Arbeitstagen" in r["share"], "absences over half of the workdays put the topic at risk")
+    # absences on the overview: the next block per person, pieces merged across weekends, "Mehr anzeigen" lists all
+    r = pg.evaluate("""()=>{const S=TB.state();let m=mondayOf(TDN)+70;while([...Array(28).keys()].some(i=>holidayOn(m+i)))m+=7;
+      const ab=(id,a,b,kind='Urlaub')=>({id,personId:'aylin',kind,start:ds(m+a),end:ds(m+b)});
+      const keep=S.absences;S.absences=keep.filter(a=>a.personId!=='aylin').concat(ab('ra1',3,4),ab('ra2',7,9),ab('ra3',14,14),ab('ra4',15,15,'Schulung'));
+      const bl=absBlocks(S.absences.filter(a=>a.personId==='aylin').sort((a,b)=>a.start.localeCompare(b.start)));render();
+      const rows=()=>[...document.querySelectorAll('.prow')].filter(e=>e.dataset.action==='edit-absence'&&e.textContent.includes('Aylin,')).map(e=>e.textContent);
+      const out={blocks:bl.map(b=>[b.start===ds(m+3),b.end,b.ids.length]),first:ds(m+9),few:rows()};
+      document.querySelector('[data-action=abs-more]').click();out.all=rows();S.absences=keep;ui.absAll=false;render();return out}""")
+    check(r["blocks"][0][0] and r["blocks"][0][1] == r["first"] and r["blocks"][0][2] == 2 and len(r["blocks"]) == 3, "pieces of leave across a weekend form one block, other kinds stay apart")
+    check(len(r["few"]) == 1 and "2 Einträge" in r["few"][0], "the overview shows only the next absence block per person")
+    check(len(r["all"]) == 3, "Mehr anzeigen lists every block")
     # acknowledging a yellow issue hides it until its date or its absences change; red ones have no check button
     row = pg.locator(".prow.issue", has_text="Stadtwerke Elmstadt")
     row.locator("[data-action=ack-issue]").click(); pg.wait_for_timeout(150)
