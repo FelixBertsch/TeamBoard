@@ -49,8 +49,8 @@ function openTopic(id,preset={}){
       +withField(t)
       +`<div class="two">${field('Start',dateIn('start',t.start,{to:'end'}))}${field('Ende',dateIn('end',t.end,{from:'start'}))}</div>`
       +group('Status',radios('status',[['geplant','Geplant'],['aktiv','Aktiv'],['erledigt','Erledigt']],t.status))
-      +group('Fokus',radios('focus',[['main','Hauptthema'],['side','Nebenbei']],t.side?'side':'main'))
-      +'<p class="d-note side-note">Bei Nebenbei-Themen meldet „Zu klären“ keine Abwesenheiten.</p>'
+      +group('Fokus',radios('focus',[['main','Hauptthema'],['side','Nebenthema']],t.side?'side':'main'))
+      +'<p class="d-note side-note">Bei Nebenthemen meldet „Zu klären“ keine Abwesenheiten.</p>'
       +`<div class="topic-done">${field('Erledigt am',dateIn('doneAt',t.doneAt||(t.status==='erledigt'?'':TODAY)))}</div>`
       +field('Notiz',`<textarea name="note" rows="4" placeholder="Kontext, Abhängigkeiten, Ansprechpartner">${esc(t.note)}</textarea>`),
     onSubmit:v=>{let{title,personId,start,end,status,note}=v;title=(title||'').trim();if(!title)return'Bitte gib einen Titel ein.';if(!start||!end)return'Bitte setze Start und Ende.';if(end<start)[start,end]=[end,start];
