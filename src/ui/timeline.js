@@ -23,6 +23,19 @@ function layout(){
   T={start,end:start+days-1,cols,width:x,week:weeks===1,fine,weeks};
 }
 const colOf=d=>T.cols[d-T.start];
+/* Absences of one person in the shown range: one hatched area per entry (a half day covers half the column, morning left,
+   afternoon right). Entries of one kind that touch form a block (absBlocks()) with a single label at its start, so the pieces of
+   one leave do not stack their labels; the tooltip lists every entry and the label opens the first one. A label never runs past
+   its block (ellipsis); below 36 px its text is hidden and only the click area and tooltip remain, so labels never overlap. */
+function absHTML(list){
+  const box=a=>{const x=pos(a.start,a.end),hw=x.w/2;return a.half?{l:a.half==='pm'?x.l+hw:x.l-3,w:hw+3}:{l:x.l-3,w:x.w+6}},by=new Map(list.map(a=>[a.id,a]));
+  return absBlocks([...list].sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end))).map(b=>{
+    const parts=b.ids.map(id=>by.get(id)),boxes=parts.map(box),a=parts[0],n=parts.length;
+    const room=Math.max(12,Math.max(...boxes.map(x=>x.l+x.w))-boxes[0].l-(a.half?2:6)-2);
+    const text=n===1&&a.half?`${absLabel(a.kind)}, ${HALF_SHORT[a.half]}`:absLabel(a.kind);
+    const tip=n===1?`${absLabel(a.kind)}, ${absWhen(a)}`:`${absLabel(a.kind)} ${parts.map(absWhen).join(', ')}, ${n} Einträge`;
+    const label=`<button class="abs-label${room<36?' bare':''}" data-action="edit-absence" data-id="${a.id}" title="${esc(tip)}" style="max-width:${room}px${room<36?`;width:${room}px`:''}">${esc(text)}</button>`;
+    return parts.map((p,i)=>`<div class="abs${p.half?' half':''}" style="left:${boxes[i].l}px;width:${boxes[i].w}px">${i?'':label}</div>`).join('')}).join('')}
 function pos(s,e){const a=Math.max(dn(s),T.start),b=Math.min(dn(e),T.end),ca=colOf(a),cb=colOf(b);return{l:ca.x+3,w:Math.max(10,cb.x+cb.w-ca.x-6)}}
 function dayAt(track,cx){const x=cx-track.getBoundingClientRect().left;for(const c of T.cols)if(x<c.x+c.w)return c.d;return T.end}
 function rangeLabel(){const s=rangeStart(),w=rangeWeeks();
@@ -101,8 +114,7 @@ function timeline(ids){
     const proj=projectLabel(id,S.assignments.filter(a=>a.personId===id&&asgOverlaps(a,ds(T.start),ds(T.end))).sort(asgSort));
     rows+=`<div class="tl-row" style="height:${h}px"><a class="tl-label" href="${hrefOf(id)}">${avatar(p,'sm')}<span class="ln"><span>${esc(p.id==='me'?'Ich':p.name)}</span>${proj?`<small>${esc(proj)}</small>`:''}</span></a>
       <div class="tl-track" data-person="${id}" style="width:${T.width}px">${bg}
-      ${abs.map(a=>{const x=pos(a.start,a.end),hw=x.w/2,l=a.half?(a.half==='pm'?x.l+hw:x.l-3):x.l-3,w=a.half?hw+3:x.w+6; // half day: morning left, afternoon right
-        return`<div class="abs${a.half?' half':''}" style="left:${l}px;width:${w}px"><button class="abs-label" data-action="edit-absence" data-id="${a.id}" title="${esc(absLabel(a.kind))}, ${esc(absWhen(a))}">${esc(absLabel(a.kind))}${a.half?', '+HALF_SHORT[a.half]:''}</button></div>`}).join('')}
+      ${absHTML(abs)}
       ${placed.map(({t,l})=>barHTML(t,l,tones[t.id])).join('')}${inv.placed.map(({t,l})=>wbarHTML(t,wTop+l*WLANE)).join('')}${chips}<div class="tl-ghost" hidden></div></div></div>`;
   }
   return`<div class="tl"><div class="tl-grid" style="width:${LABEL+T.width}px;--label:${LABEL}px">${headHTML()}${rows}</div></div>`;

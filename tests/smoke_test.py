@@ -600,6 +600,14 @@ with sync_playwright() as p:
     pg.click("#dform label:has(input[name=half][value=am])"); pg.click("#dform button[type=submit]"); pg.wait_for_timeout(150)
     check(pg.evaluate("TB.state().absences.some(a=>a.personId==='lena'&&a.start===TODAY&&a.end===TODAY&&a.half==='am')"), "a half day is saved with half")
     check(pg.locator(".abs.half").count() >= 1, "the timeline draws the half day")
+    r = pg.evaluate("""()=>{const S=TB.state(),m=mondayOf(TDN),keep=S.absences,rg=ui.range,off=ui.off;
+      S.absences=keep.concat({id:'lb1',personId:'me',kind:'Urlaub',start:ds(m),end:ds(m+1)},{id:'lb2',personId:'me',kind:'Urlaub',start:ds(m+2),end:ds(m+2),half:'am'},{id:'lb3',personId:'me',kind:'Schulung',start:ds(m+3),end:ds(m+3)});
+      ui.range='week';ui.off=0;render();const labels=()=>[...document.querySelectorAll('.tl-track[data-person=me] .abs-label')];
+      const out={week:labels().map(l=>l.textContent),tip:labels()[0]?.title||''};ui.range='six';render();
+      const rs=labels().map(l=>l.getBoundingClientRect());out.overlap=rs.some((a,i)=>rs.some((b,j)=>j>i&&a.right>b.left+0.5&&b.right>a.left+0.5&&a.bottom>b.top&&b.bottom>a.top));
+      S.absences=keep;ui.range=rg;ui.off=off;render();return out}""")
+    check(r["week"] == ["Urlaub", "Schulung"] and "2 Einträge" in r["tip"], "touching entries of one kind share one label in the timeline")
+    check(not r["overlap"], "absence labels never overlap, also in six weeks")
     pg.evaluate("(S=>{S.absences=S.absences.filter(a=>!(a.personId==='lena'&&a.half));render()})(TB.state())")
     # holidays per state: computed per year, shown in the timeline, left out of workday counts, flagged under "Zu klären"
     check(pg.evaluate("[2024,2025,2026,2027,2038].map(y=>ds(easterSunday(y))).join()") == "2024-03-31,2025-04-20,2026-04-05,2027-03-28,2038-04-25", "Easter dates")
