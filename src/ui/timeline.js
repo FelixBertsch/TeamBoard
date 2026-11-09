@@ -62,8 +62,8 @@ function toneMap(){const m={},by={};
   for(const k in by)by[k].sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end)||a.id.localeCompare(b.id)).forEach((t,i)=>m[t.id]=i%3);
   return m}
 function barHTML(t,l,tone=0){
-  const x=pos(t.start,t.end),late=topicLate(t),ov=overlapAbs(t);
-  const note=late?' Ende überschritten.':ov?` Überschneidet ${ov.kind} ${dm(ov.start)} bis ${dm(ov.end)}.`:'';
+  const x=pos(t.start,t.end),late=topicLate(t),ov=absRisk(t);
+  const note=late?' Ende überschritten.':ov?` ${ov.text[0].toUpperCase()+ov.text.slice(1)}.`:'';
   return`<div class="bar ${t.status} tone-${tone}" data-id="${t.id}" tabindex="0" role="button" style="left:${x.l}px;width:${x.w}px;top:${10+l*LANE}px"
     title="${esc(t.title)}: ${dm(t.start)} bis ${dm(t.end)}.${withOf(t).length?` Mit ${esc(withNames(t))}.`:''}${note}"><span class="h h-l"></span>${late?`<span class="flag late">${ic('alert',14,2.5)}</span>`:ov?`<span class="flag warn">${ic('alert',14,2.5)}</span>`:''}<span class="bar-t">${esc(t.title)}</span><span class="h h-r"></span></div>`;
 }

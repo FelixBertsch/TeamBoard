@@ -346,6 +346,20 @@ with sync_playwright() as p:
     pg.evaluate("location.hash='uebersicht'"); pg.wait_for_timeout(150)
     check(pg.locator(".pj").count() > 0 and "Ohne Projekt" in pg.inner_text("main"), "projects panel on the overview")
     check(any("Stadtwerke Elmstadt" in t for t in pg.locator(".prow.issue").all_inner_texts()), "ending project shows under Zu klären")
+    # absences put only main topics at risk, and only near the end or when they cover more than half of the workdays; one entry per topic
+    r = pg.evaluate("""()=>{const S=TB.state();let m=mondayOf(TDN)+70;while([...Array(28).keys()].some(i=>holidayOn(m+i)))m+=7;
+      const t={id:'rk1',personId:'aylin',title:'Risikothema',start:ds(m),end:ds(m+18),status:'geplant',note:''};S.topics.push(t);
+      const ab=(id,a,b)=>({id,personId:'aylin',kind:'Urlaub',start:ds(m+a),end:ds(m+b)}),set=(...l)=>{S.absences=S.absences.filter(a=>!a.id.startsWith('rk'));S.absences.push(...l)};
+      const out={};set(ab('rka',2,2),ab('rkb',8,8));out.mid=absRisk(t);
+      set(ab('rka',2,2),ab('rkb',8,8),ab('rkc',17,17));out.end=absRisk(t)?.text;render();
+      out.rows=[...document.querySelectorAll('.prow.issue')].filter(e=>e.textContent.includes('Risikothema')).map(e=>e.textContent);
+      t.side=true;out.side=absRisk(t);delete t.side;
+      set(ab('rka',0,9));out.share=absRisk(t)?.text;
+      S.topics=S.topics.filter(x=>x!==t);set();render();return out}""")
+    check(r["mid"] is None, "single days off in the middle of a topic are no risk")
+    check(r["end"] and "kurz vor dem Ende im Urlaub" in r["end"] and "bis" not in r["end"] and len(r["rows"]) == 1, "a day off near the end shows once under Zu klären")
+    check(r["side"] is None, "side topics get no absence warning")
+    check(r["share"] and "an 8 von 15 Arbeitstagen" in r["share"], "absences over half of the workdays put the topic at risk")
     pg.keyboard.press("Escape"); pg.keyboard.press("6"); pg.wait_for_timeout(100)
     check(pg.locator(".hc.wk").count() == 6, "six-week view")
     pg.evaluate("document.querySelector('.tl-track[data-person=aylin]').scrollIntoView({block:'center'})")  # keep clear of the toast

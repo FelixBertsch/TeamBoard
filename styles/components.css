@@ -404,7 +404,7 @@ button.date-pick:focus-visible{outline:none;box-shadow:var(--shadow-focus)}
 /* Todo form: "Erledigt am" only while the checkbox is ticked */
 .done-g .field{margin:12px 0 0}
 .done-g:not(:has(input[name=done]:checked)) .field{display:none}
-#dform:not(:has(input[name=status][value=erledigt]:checked)) .topic-done,#dform:has(input[name=repeat][value=""]:checked) .rep-note{display:none}
+#dform:not(:has(input[name=status][value=erledigt]:checked)) .topic-done,#dform:not(:has(input[name=focus][value=side]:checked)) .side-note,#dform:has(input[name=repeat][value=""]:checked) .rep-note{display:none}
 /* Absence form: no details for sick days */
 .abs-sick{margin:0}
 #dform:has(input[name=kind][value=Krank]:checked) .abs-note,#dform:not(:has(input[name=kind][value=Krank]:checked)) .abs-sick{display:none}

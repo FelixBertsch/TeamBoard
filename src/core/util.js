@@ -28,7 +28,8 @@ function parseDeDate(t){t=(t||'').trim();if(!t)return'';let y,m,d,x;
   const iso=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;return ds(dn(iso))===iso?iso:null} // null = invalid
 const longDay=s=>`${WDL[wdOf(dn(s))]}, ${dm(s)}`;
 function dueLabel(s){const d=dn(s)-TDN;if(d===0)return'heute';if(d===1)return'morgen';if(d===-1)return'gestern';return `${WD[wdOf(dn(s))]} ${dm(s)}`}
-function workdays(a,b){let n=0;for(let i=dn(a);i<=dn(b);i++){const w=wdOf(i);if(w>0&&w<6&&!holidayOn(i))n++}return n} // Monday to Friday without holidays
+const isWorkday=n=>{const w=wdOf(n);return w>0&&w<6&&!holidayOn(n)}; // Monday to Friday without holidays (day number)
+function workdays(a,b){let n=0;for(let i=dn(a);i<=dn(b);i++)if(isWorkday(i))n++;return n}
 function fmtRange(a,b){const da=new Date(a*DAYMS),db=new Date(b*DAYMS);
   const left=da.getUTCMonth()===db.getUTCMonth()?`${da.getUTCDate()}.`:`${da.getUTCDate()}. ${MON[da.getUTCMonth()]}`;
   return `${left} bis ${db.getUTCDate()}. ${MON[db.getUTCMonth()]}`}

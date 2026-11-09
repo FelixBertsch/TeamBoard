@@ -49,12 +49,14 @@ function openTopic(id,preset={}){
       +withField(t)
       +`<div class="two">${field('Start',dateIn('start',t.start,{to:'end'}))}${field('Ende',dateIn('end',t.end,{from:'start'}))}</div>`
       +group('Status',radios('status',[['geplant','Geplant'],['aktiv','Aktiv'],['erledigt','Erledigt']],t.status))
+      +group('Fokus',radios('focus',[['main','Hauptthema'],['side','Nebenbei']],t.side?'side':'main'))
+      +'<p class="d-note side-note">Bei Nebenbei-Themen meldet „Zu klären“ keine Abwesenheiten.</p>'
       +`<div class="topic-done">${field('Erledigt am',dateIn('doneAt',t.doneAt||(t.status==='erledigt'?'':TODAY)))}</div>`
       +field('Notiz',`<textarea name="note" rows="4" placeholder="Kontext, Abhängigkeiten, Ansprechpartner">${esc(t.note)}</textarea>`),
     onSubmit:v=>{let{title,personId,start,end,status,note}=v;title=(title||'').trim();if(!title)return'Bitte gib einen Titel ein.';if(!start||!end)return'Bitte setze Start und Ende.';if(end<start)[start,end]=[end,start];
       const w=parseWith(v.with,ex);if(w.err)return w.err;
       const was=ex?.status==='erledigt',doneAt=status!=='erledigt'?null:v.doneAt||(was?ex.doneAt:TODAY);
-      const o=ex||newEntry({});Object.assign(o,{title,personId,start,end,status,note});setWith(o,w.ids);if(doneAt)o.doneAt=doneAt;else delete o.doneAt;
+      const o=ex||newEntry({});Object.assign(o,{title,personId,start,end,status,note});setWith(o,w.ids);if(v.focus==='side')o.side=true;else delete o.side;if(doneAt)o.doneAt=doneAt;else delete o.doneAt;
       if(!ex)S.topics.push(o);save();toast(ex?'Thema gespeichert':'Thema angelegt',true)},
     onDelete:ex?()=>{S.topics=S.topics.filter(x=>x.id!==id);save();toast('Thema gelöscht',true)}:null});
 }
