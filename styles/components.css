@@ -336,7 +336,7 @@ button.date-pick:focus-visible{outline:none;box-shadow:var(--shadow-focus)}
   padding:12px 12px 10px;animation:pop-in 120ms var(--ease-in)}
 .dp-head{display:flex;align-items:center;gap:4px;margin-bottom:4px}
 .dp-head b{flex:1;text-align:center;font-size:16px;font-weight:800;color:var(--text-strong)}
-.dp-grid{border-collapse:collapse}
+.dp-grid{border-collapse:separate;border-spacing:0} /* collapse would ignore the rounded ends of the range band */
 .dp-grid th{font-size:12px;font-weight:800;color:var(--text-muted);padding:4px 0 6px;text-align:center}
 .dp-grid th.dp-kw,.dp-grid tbody th{width:32px;font-size:11px;font-weight:700;color:var(--text-subtle);padding:0;font-variant-numeric:tabular-nums}
 .dp-grid td{padding:1px;text-align:center}
@@ -351,6 +351,17 @@ button.date-pick:focus-visible{outline:none;box-shadow:var(--shadow-focus)}
 .dp-d.sel:hover{background:var(--primary-hover)}
 .dp-d:focus-visible{outline:none;box-shadow:var(--shadow-focus)}
 .dp-d.td:focus-visible{box-shadow:inset 0 0 0 2px var(--accent),var(--shadow-focus)}
+/* Range (start field with data-to, end field with data-from): band behind the days, filled endpoints, hint and day count */
+.dp-grid td.in{background:var(--navy-100)}
+.dp-grid td.in.rs{border-radius:999px 0 0 999px}
+.dp-grid td.in.re{border-radius:0 999px 999px 0}
+.dp-grid td.in .dp-d:not(.ep):hover{background:var(--navy-200)}
+.dp-d.ep{background:var(--primary);color:var(--primary-fg);box-shadow:none}
+.dp-d.ep:hover{background:var(--primary-hover)}
+.dp-d.ep:focus-visible{box-shadow:var(--shadow-focus)}
+.dp-info{width:0;min-width:100%;margin-top:8px;padding:0 4px;font-size:14px;line-height:20px}
+.dp-info b{display:block;font-weight:800;color:var(--text-strong)}
+.dp-info span{display:block;min-height:20px;font-weight:600;color:var(--text-muted)}
 .dp-foot{display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--border-subtle);margin-top:8px;padding-top:8px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .d-err{color:var(--late-fg);font-size:14px;font-weight:700;min-height:22px;margin:0}

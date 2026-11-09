@@ -84,10 +84,13 @@ document.addEventListener('keyup',e=>{if(suggestField(e.target)&&/^(ArrowLeft|Ar
 document.addEventListener('focusout',e=>{if(sug&&e.target===sug.input)closeSuggest()});
 document.addEventListener('change',e=>{if(e.target.id==='histPerson'){ui.hist.pid=e.target.value;render()}
   if(e.target.id==='forPerson'){ui.forPid=e.target.value;ui.showDone=false;render()}});
-/* Date fields (phone): the native picker writes TT.MM.JJJJ into the text field; typed dates move the picker and are tidied on leaving the field. */
+/* Date fields (phone): the native picker writes TT.MM.JJJJ into the text field; typed dates move the picker and are tidied on leaving the field.
+   Every device: a start field with data-to pushes its end along when the end lies before the new start (an empty end stays empty). */
 document.addEventListener('change',e=>{const el=e.target;
   if(el.matches('.date-pick input')){const t=el.closest('.date-in').querySelector('[data-date]');t.value=deDate(el.value);t.dispatchEvent(new Event('change',{bubbles:true}));return}
-  if(el.matches('[data-date]')){const iso=parseDeDate(el.value);if(iso)el.value=deDate(iso);const n=el.closest('.date-in').querySelector('input[type=date]');if(n)n.value=iso||''}});
+  if(el.matches('[data-date]')){const iso=parseDeDate(el.value);if(iso)el.value=deDate(iso);const n=el.closest('.date-in').querySelector('input[type=date]');if(n)n.value=iso||'';
+    const to=el.dataset.to&&el.form?.elements[el.dataset.to],end=to&&parseDeDate(to.value);
+    if(iso&&end&&end<iso){to.value=deDate(iso);to.dispatchEvent(new Event('change',{bubbles:true}))}}});
 document.addEventListener('click',e=>{const p=e.target.closest('.date-pick input');if(!p||document.documentElement.classList.contains('touch'))return;
   try{p.showPicker()}catch(err){}}); // Chrome/Edge open the picker only via its own icon; touch devices open it on tap
 /* Capture sheet: due chips and the custom date field are mutually exclusive. */

@@ -7,8 +7,9 @@ const group=(label,control)=>`<div class="field" role="group" aria-label="${labe
 const radios=(name,opts,val)=>`<div class="tags">${opts.map(([v,l])=>`<label><input type="radio" name="${name}" value="${v}"${v===val?' checked':''}><span>${esc(l)}</span></label>`).join('')}</div>`;
 /* Date field: text input in TT.MM.JJJJ plus a calendar button. Laptop and monitor: the button opens the own calendar (datepicker.js).
    Phone: the button holds a hidden native date input, whose picker iOS shows in the device language; events.js keeps both in sync.
-   formValues() converts the text back to ISO. */
-const dateIn=(name,iso)=>`<span class="date-in"><input name="${name}" value="${deDate(iso)}" data-date placeholder="TT.MM.JJJJ" autocomplete="off" spellcheck="false">`
+   formValues() converts the text back to ISO. Pairs: link {to:'end'} on the start field, {from:'start'} on the end field; the start's
+   calendar then picks the whole range, and an end before a newly set start follows it (events.js). */
+const dateIn=(name,iso,link={})=>`<span class="date-in"><input name="${name}" value="${deDate(iso)}" data-date${link.to?` data-to="${link.to}"`:''}${link.from?` data-from="${link.from}"`:''} placeholder="TT.MM.JJJJ" autocomplete="off" spellcheck="false">`
   +(isPhone()?`<span class="date-pick" title="Kalender öffnen">${ic('calendar',18)}<input type="date" tabindex="-1" aria-hidden="true" value="${iso||''}"></span></span>`
     :`<button type="button" class="date-pick" data-action="date-pick" aria-label="Kalender öffnen" aria-haspopup="dialog" title="Kalender öffnen (Alt+Pfeil runter)">${ic('calendar',18)}</button></span>`);
 function formValues(f){const v=Object.fromEntries(new FormData(f));let bad=null;
@@ -46,7 +47,7 @@ function openTopic(id,preset={}){
   openDrawer({title:ex?'Thema bearbeiten':'Neues Thema',submitLabel:ex?'Speichern':'Thema anlegen',top:preset.top,
     body:field('Titel',`<input name="title" value="${esc(t.title)}" autocomplete="off" placeholder="z. B. Payment-API v2"${preset.top?' autofocus enterkeyhint="done"':''}>`)+field('Verantwortlich',`<select name="personId">${personOptions(t.personId)}</select>`)
       +withField(t)
-      +`<div class="two">${field('Start',dateIn('start',t.start))}${field('Ende',dateIn('end',t.end))}</div>`
+      +`<div class="two">${field('Start',dateIn('start',t.start,{to:'end'}))}${field('Ende',dateIn('end',t.end,{from:'start'}))}</div>`
       +group('Status',radios('status',[['geplant','Geplant'],['aktiv','Aktiv'],['erledigt','Erledigt']],t.status))
       +`<div class="topic-done">${field('Erledigt am',dateIn('doneAt',t.doneAt||(t.status==='erledigt'?'':TODAY)))}</div>`
       +field('Notiz',`<textarea name="note" rows="4" placeholder="Kontext, Abhängigkeiten, Ansprechpartner">${esc(t.note)}</textarea>`),
@@ -62,7 +63,7 @@ function openAbsence(id,preset={}){
   const a=ex||{personId:preset.personId||'me',kind:preset.kind||'Urlaub',start:preset.start||TODAY,end:preset.end||preset.start||TODAY,note:preset.note||''};
   openDrawer({title:ex?'Abwesenheit bearbeiten':'Abwesenheit eintragen',submitLabel:ex?'Speichern':'Eintragen',top:preset.top,
     body:field('Person',`<select name="personId">${personOptions(a.personId)}</select>`)+group('Art',radios('kind',[['Urlaub','Urlaub'],['Krank','Krank'],['Schulung','Schulung'],['Sonstiges','Abwesend']],a.kind))
-      +`<div class="two">${field('Von',dateIn('start',a.start))}${field('Bis',dateIn('end',a.end))}</div>`
+      +`<div class="two">${field('Von',dateIn('start',a.start,{to:'end'}))}${field('Bis',dateIn('end',a.end,{from:'start'}))}</div>`
       +`<div class="abs-note">${field('Notiz',`<input name="note" value="${esc(a.note)}" autocomplete="off" placeholder="z. B. Vertretung durch Lena">`)}</div>`
       +`<p class="d-note abs-sick">Bei Krankheit speichert das Teamboard keine Details. ${CFG.sickVisibleDays} Tage nach dem Ende steht dort nur noch „Abwesend“.</p>`,
     onSubmit:v=>{let{personId,kind,start,end}=v;if(!start||!end)return'Bitte setze Von und Bis.';if(end<start)[start,end]=[end,start];
@@ -77,7 +78,7 @@ function openAssignment(id,preset={}){
   openDrawer({title:ex?'Projekt bearbeiten':'Projekt zuordnen',submitLabel:ex?'Speichern':'Zuordnen',assignment:ex?'edit':'new',
     body:field('Projekt',`<input name="project" value="${esc(a.project)}" list="projNames" autocomplete="off" placeholder="Kunde, z. B. Kranich Versicherung"><datalist id="projNames">${projectNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`)
       +field('Person',`<select name="personId">${personOptions(a.personId)}</select>`)
-      +`<div class="two">${field('Start',dateIn('start',a.start))}${field('Ende',dateIn('end',a.end))}</div>`
+      +`<div class="two">${field('Start',dateIn('start',a.start,{to:'end'}))}${field('Ende',dateIn('end',a.end,{from:'start'}))}</div>`
       +'<p class="d-note">Ohne Ende läuft das Projekt, bis du eins einträgst.</p>'
       +group('Fakturierbar',radios('billable',[['ja','Ja'],['nein','Nein, intern']],a.billable?'ja':'nein'))
       +field('Notiz',`<textarea name="note" rows="3" placeholder="Rolle im Projekt, Ansprechpartner">${esc(a.note)}</textarea>`),

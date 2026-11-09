@@ -15,7 +15,7 @@ Function index of `src/ui/`, UI state and routes. Use it to find things; the cod
 | `views-phone.js` | `viewToday()`, `viewTeam()` with `stripHTML()`, `viewPersonPhone()`, `awayChips()` |
 | `views-history.js` | `viewHistory()` (`#verlauf`, desktop and phone), `historyEvents()`, `historyLink()`, `reviewPanel()` (yearly review on person pages) |
 | `render.js` | `render()` incl. setup page and demo banner |
-| `datepicker.js` | Own calendar for date fields on laptop and monitor: `openDp()`, `closeDp()`, `dpKey()` (called first in the keyboard handler) |
+| `datepicker.js` | Own calendar for date fields on laptop and monitor: `openDp()`, `closeDp()`, `dpKey()` (called first in the keyboard handler); range picking for linked start and end fields (`docs/dates.md`) |
 | `drawer.js` | `dateIn()`, `withField()`/`parseWith()` ("Beteiligt"), `openDrawer()` and the forms `openTopic()`, `openAbsence()`, `openAssignment()`, `openTalk()`, `openTodo()`, `openPerson()` (with `archivePerson()`), `openContacts()`, `openContact()`, `openMore()`. An `onSubmit` that opens another form itself returns `KEEP_OPEN`. |
 | `capture.js` | Phone "+" sheet: `openCapture()`, `dueChoices()`, `capPreview()` |
 | `setup.js` | Setup page (three steps with prefilled GitHub links, repository detection), demo mode, disconnect, `syncHTML(full)` (compact in the sidebar, with repository in "Mehr"), `storageActions()` (entries of "Mehr") |
