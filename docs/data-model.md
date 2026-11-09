@@ -20,7 +20,8 @@ Decrypted content, also the format of backups and exports:
   "talks":    [{ "id": "…", "personId": "lena", "text": "Probezeit-Feedback", "done": true, "doneAt": "2026-11-06" }],
   "assignments": [{ "id": "…", "personId": "lena", "project": "Kranich Versicherung", "start": "2026-03-01", "end": null,
                     "billable": true, "note": "" }],
-  "settings": [{ "id": "region", "value": "HE" }, { "id": "phone", "value": "2026-11-08" }]
+  "settings": [{ "id": "region", "value": "HE" }, { "id": "phone", "value": "2026-11-08" }],
+  "acks":     [{ "id": "abs-a1b2c3d", "sig": "2026-11-13", "items": ["…:2026-11-12:2026-11-13"], "at": "2026-11-09" }]
 }
 ```
 
@@ -36,6 +37,7 @@ Meanings you cannot derive from the names:
 - `topics[].status`: `geplant` (outlined), `aktiv` (navy), `erledigt` (grey). Stored values are German; keep them. Active and planned bars alternate between three navy tones (`tone-0` to `tone-2`, `toneMap()`): the index of the topic among the person's topics sorted by start, modulo 3. Parallel topics therefore differ, and the tone stays the same while paging. Color never means anything else; status keeps its word or icon.
 - `todos[].kind`: `team` = the person's task, `mine` = the user's todo about that person, `waiting` = the user waits for something from the person. If `personId` is `me`, `kind` is always `team`. This rule lives in three places (`parseQuick`, `openTodo`, dragging) and must stay consistent.
 - `topics[].side`: `true` for a topic that runs on the side („Nebenthema“ in the form); missing = main topic. Side topics never get absence warnings, overdue ones still count as late. See `absRisk()` in `issues.js`.
+- `acks`: yellow "Zu klären" issues the user marked as clarified („Als geklärt markieren“). `id` names the issue (`abs-<topic>`, `tabs-<todo>` absence on the due date, `thol-<todo>` holiday, `asg-<assignment>`), `sig` the date it hangs on (topic end, due date, assignment end), `items` the absences behind it (`<id>:<start>:<end>`). The issue stays hidden while `sig` is equal and its current absences are a subset of `items`; a moved date or a new or changed absence brings it back, an absence that is over does not. `ackIssue()` drops entries whose issue is gone. Red issues (late) cannot be acknowledged.
 - `absences[].kind`: `Urlaub`, `Krank`, `Schulung`, `Sonstiges`. Display via `absLabel()`: `Sonstiges` reads "Abwesend". Optional `note`, never for `Krank`.
 - **Sick days are not kept as history.** `expireSick()` turns a `Krank` absence into `Sonstiges` and drops its note `CFG.sickVisibleDays` (7) days after its end. It runs after every load (`Store.resume`, `connect`, `sync`, import, demo) via `applyExpiry()`, without an undo step. The history view and the yearly review never list or count `Krank` or `Sonstiges`. Do not add a sick-day count or list anywhere; the user decided this for legal reasons.
 - `doneAt` (`YYYY-MM-DD`) on todos and talks: set when completed, removed when reopened; on topics when the status becomes `erledigt`. Every form shows it for correction („Erledigt am“, „Besprochen am“; for topics only while the status is „Erledigt“). Older entries have none and show under "Ohne Datum" (topics fall back to `end`).

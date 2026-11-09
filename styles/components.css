@@ -291,6 +291,17 @@ h3{font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.02em;color:v
 .prow .pt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prow .pd{font-size:13px;color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .prow.issue .pt{white-space:normal;line-height:1.4}
+/* "Zu klären": the text opens the entry, the check button beside it acknowledges a yellow issue (always visible, also on touch) */
+.prow.issue{cursor:default;gap:4px;padding:4px 0}
+.issue-open{flex:1;min-width:0;display:flex;gap:10px;align-items:center;border:0;background:none;padding:6px 0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.prow.issue:hover .pt{text-decoration:none}
+.issue-open:hover .pt{color:var(--text-strong);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--border-default)}
+.prow.issue .icon-btn.ack{flex:none;color:var(--text-muted)}
+.prow.issue .icon-btn.ack:hover{color:var(--text-strong)}
+.prow.issue .icon-btn.ack:focus-visible{outline:none;box-shadow:var(--shadow-focus)}
+.ack-sp{flex:none;width:36px}
+.prow.issue.acked .pt{color:var(--text-muted)}
+.prow.issue.acked .link-btn{flex:none;margin-left:8px}
 .prow .ic.late{color:var(--error-500)}
 .prow .ic.warn{color:var(--warning-700)}
 .st{display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:700;flex:none}

@@ -6,6 +6,9 @@ document.addEventListener('click',async e=>{
     switch(a.dataset.action){
       case'close-drawer':closeDrawer();break;
       case'date-pick':openDp(a);break;
+      case'ack-issue':if(ackIssue(id)){save();render();toast('Als geklärt markiert',true)}break;
+      case'unack-issue':S.acks=(S.acks||[]).filter(x=>x.id!==id);save();render();toast('Wieder unter „Zu klären“',true);break;
+      case'show-acked':ui.showAcked=!ui.showAcked;render();break;
       case'delete':if(drawerCfg?.onDelete){const fn=drawerCfg.onDelete;closeDrawer(false);fn();render()}break;
       case'new-topic':openTopic(null,{personId:a.dataset.person||ctx().personId});break;
       case'edit-topic':openTopic(id);break;

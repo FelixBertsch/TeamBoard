@@ -79,6 +79,8 @@ html.lay-phone,.lay-phone body{height:auto}
 .lay-phone .panel-head{margin-bottom:4px}
 .lay-phone .panel-head .link-btn{min-height:44px;padding:0 4px}
 .lay-phone .prow{min-height:52px}
+.lay-phone .prow.issue .icon-btn.ack,.lay-phone .ack-sp{width:44px;height:44px}
+.lay-phone .prow.issue .link-btn{min-height:44px}
 .lay-phone .grp{margin:8px 0 2px}
 .lay-phone .todo{min-height:56px;margin:0 -8px;padding:4px 8px;gap:14px}
 .lay-phone .todo-body{flex-direction:column;align-items:stretch;gap:0}

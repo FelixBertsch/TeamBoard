@@ -128,7 +128,7 @@ Rules most often broken:
 - **New field:** handle missing values with `??`; no migration needed. Renames or changed meaning need a `DATA_VERSION` bump and a migration in `normalize()`. A new top-level list goes into `empty()` and `Store.serialize()`. See `docs/data-model.md`.
 - **New action:** element with `data-action="name"` and `data-id`, `case'name':` in `events.js`: change `S`, `save()`, `render()`, `toast(text, true)` for undo.
 - **New panel:** a function returning `<section class="card card-pad">` with `<div class="panel-head"><h2 class="h4">Titel</h2></div>` and `.prow` rows (model: `issuesPanel()`). Desktop into the `.stack` of `viewOverview()`/`viewPerson()`, phone into the `.m-stack` of `viewToday()`/`viewPersonPhone()`. Everything must stay reachable on the iPhone.
-- **New "Zu klären" rule:** push `{kind:'late'|'warn', act, id, pid, text}` in `issues(pid)`; `act` is an existing action like `edit-topic`.
+- **New "Zu klären" rule:** push `{kind:'late'|'warn', act, id, pid, text}` in `allIssues(pid)`; `act` is an existing action like `edit-topic`. A yellow rule also sets `ack` (a stable id with its own prefix), `sig` (the date it hangs on) and, if absences cause it, `items`, so it can be acknowledged (`acks` in `docs/data-model.md`).
 - **New setting:** developer setting into `CFG` with a comment; a user setting for every device into `S.settings` via `setSetting()` (document the id in `docs/data-model.md`); a device-only preference into `localStorage` under `KEY`.
 - **New keyboard shortcut:** in the keyboard handler inside `if(!typing&&!open&&…)` and in `KEYS` (`sidebar.js`), which feeds the sidebar footer and "Mehr". Taken: N, W, 2, 6, Ctrl+Z, Esc, Enter.
 - **New entry in "Mehr":** add `[action, icon, label]` to `storageActions()` (`setup.js`) and a `case` in `events.js`. Rarely used functions belong there, not in the sidebar.
@@ -162,6 +162,8 @@ Each with its date and reason, so they are not reopened without a new argument.
 - **Data repository per device, not in the code** (8.11.2026): anyone can use the published app with their own private repository, without a fork.
 - **Holidays per state as a synced setting** (8.11.2026): computed, no data source; every device shows the same days off.
 - **Tour on sample data** (8.11.2026): a tour across an empty board explains nothing. No tour library.
+- **Absence warnings only where the finish of a main topic is at risk** (9.11.2026): long topics that run on the side collected one warning per day off. Topics are main or side topics (`side`); side topics get no absence warnings, main topics only for an absence on the end date or the three workdays before it, or absences over more than half of the remaining workdays. One entry per topic.
+- **Acknowledge per warning, not per absence** (9.11.2026): a yellow "Zu klären" entry can be marked as clarified and comes back when its date or its absences change. Red entries (late) cannot be hidden, because they mean the data is wrong.
 - **Rarely used functions under "Mehr"** (8.11.2026): contacts, backups, holidays, tour and sign-out sit in "Mehr" on every layout. The sidebar keeps navigation, the team, the shortcut list and the sync status; the repository name shows only in the tooltip and in "Mehr".
 
 ## Pitfalls

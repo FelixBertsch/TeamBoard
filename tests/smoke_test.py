@@ -360,6 +360,25 @@ with sync_playwright() as p:
     check(r["end"] and "kurz vor dem Ende im Urlaub" in r["end"] and "bis" not in r["end"] and len(r["rows"]) == 1, "a day off near the end shows once under Zu klären")
     check(r["side"] is None, "side topics get no absence warning")
     check(r["share"] and "an 8 von 15 Arbeitstagen" in r["share"], "absences over half of the workdays put the topic at risk")
+    # acknowledging a yellow issue hides it until its date or its absences change; red ones have no check button
+    row = pg.locator(".prow.issue", has_text="Stadtwerke Elmstadt")
+    row.locator("[data-action=ack-issue]").click(); pg.wait_for_timeout(150)
+    check(pg.locator(".prow.issue:not(.acked)", has_text="Stadtwerke Elmstadt").count() == 0 and "1 geklärte anzeigen" in pg.inner_text("[data-tour=issues]"), "a clarified issue leaves the list")
+    pg.click("[data-action=show-acked]"); pg.wait_for_timeout(100)
+    pg.locator(".prow.issue.acked", has_text="Stadtwerke Elmstadt").locator("[data-action=unack-issue]").click(); pg.wait_for_timeout(150)
+    check(pg.locator(".prow.issue:not(.acked)", has_text="Stadtwerke Elmstadt").count() == 1, "Wieder anzeigen brings it back")
+    pg.evaluate("ui.showAcked=false;render()")
+    r = pg.evaluate("""()=>{const S=TB.state();let m=mondayOf(TDN)+70;while([...Array(28).keys()].some(i=>holidayOn(m+i)))m+=7;
+      const t={id:'rk2',personId:'aylin',title:'Quittierthema',start:ds(m),end:ds(m+18),status:'geplant',note:''};S.topics.push(t);
+      S.absences.push({id:'rkd',personId:'aylin',kind:'Urlaub',start:ds(m+17),end:ds(m+17)});
+      const out={ok:ackIssue('abs-rk2'),hidden:topicWarn(t)===null&&!issues().some(i=>i.id==='rk2')};
+      S.absences.push({id:'rke',personId:'aylin',kind:'Urlaub',start:ds(m+16),end:ds(m+16)});out.back=!!topicWarn(t);
+      S.absences=S.absences.filter(a=>a.id!=='rke');t.end=ds(m+17);out.moved=!!topicWarn(t);
+      out.late=allIssues().filter(i=>i.kind==='late').every(i=>!i.ack);
+      S.topics=S.topics.filter(x=>x!==t);S.absences=S.absences.filter(a=>a.id!=='rkd');S.acks=[];render();return out}""")
+    check(r["ok"] and r["hidden"], "a clarified topic warning hides the flag too")
+    check(r["back"] and r["moved"], "a new absence or a moved end brings the warning back")
+    check(r["late"], "red issues cannot be acknowledged")
     pg.keyboard.press("Escape"); pg.keyboard.press("6"); pg.wait_for_timeout(100)
     check(pg.locator(".hc.wk").count() == 6, "six-week view")
     pg.evaluate("document.querySelector('.tl-track[data-person=aylin]').scrollIntoView({block:'center'})")  # keep clear of the toast

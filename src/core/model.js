@@ -51,9 +51,9 @@ function demo(){
   const as=(personId,project,s,e,billable=true)=>({id:uid(),personId,project,start:ds(TDN+s),end:e===null?null:ds(TDN+e),billable,note:''});
   const assignments=[as('lena','Kranich Versicherung',-210,null),as('jonas','Stadtwerke Elmstadt',-120,18),as('aylin','Kranich Versicherung',-60,null),
     as('aylin','Interne Plattform',-60,null,false),as('tobias','Lotsen Logistik',-300,-31),as('tobias','Kanzlei Berg',-30,90)];
-  return{people,contacts,topics,absences,todos,talks,assignments,settings:[{id:'region',value:'NW'}]};
+  return{people,contacts,topics,absences,todos,talks,assignments,settings:[{id:'region',value:'NW'}],acks:[]};
 }
-const empty=()=>({people:[],contacts:[],topics:[],absences:[],todos:[],talks:[],assignments:[],settings:[]});
+const empty=()=>({people:[],contacts:[],topics:[],absences:[],todos:[],talks:[],assignments:[],settings:[],acks:[]});
 const DATA_VERSION=2;
 /* New entries carry createdAt (ISO timestamp) for a later search and for sorting; older entries have none. */
 const newEntry=o=>({id:uid(),...o,createdAt:new Date().toISOString()});
@@ -85,7 +85,7 @@ const hasSetting=id=>(S.settings||[]).some(s=>s.id===id);
 function setSetting(id,value){const x=S.settings.find(s=>s.id===id);if(x)x.value=value;else S.settings.push({id,value})}
 let S=empty();
 lastSaved=JSON.stringify(S);
-const ui={filter:'alle',tab:{},forPid:'',off:0,range:['week','two','six'].includes(CFG.defaultView)?CFG.defaultView:'week',more:false,showDone:false,
+const ui={showAcked:false,filter:'alle',tab:{},forPid:'',off:0,range:['week','two','six'].includes(CFG.defaultView)?CFG.defaultView:'week',more:false,showDone:false,
   hist:{type:'alle',pid:'',q:'',weeks:8},year:{}}; // hist: filters of the history view; year: review year per person
 try{const u=JSON.parse(localStorage.getItem(KEY+'.ui')||'{}');if(['week','two','six'].includes(u.range))ui.range=u.range}catch(e){}
 
