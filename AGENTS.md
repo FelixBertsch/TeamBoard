@@ -136,7 +136,7 @@ Rules most often broken:
 - **New "Erste Schritte" item:** `[done, label, action]` in `firstSteps()`; `done` is derived from the data, never stored.
 - **New quick capture command or tag:** `parseQuick()`, `previewHTML()`, `TAG_HELP`. See `docs/quick-capture.md`.
 - **New event type in the history:** push `{type, day, pid, title, sub, act, id}` in `historyEvents()` and add the type to `HIST_TYPES` and `HIST_ICONS`.
-- **New type in the phone capture sheet:** `CAP_TYPES` and a branch in `openCapture()`. The text field gets `autofocus` so Safari opens the keyboard inside the tap gesture.
+- **New type in the phone capture sheet:** `CAP_TYPES` and a branch in `openCapture()`, built from the same pieces as the other types (title "Neu erfassen", people as `pid` chips, dates as chips plus "Anderes Datum"). The text field gets `autofocus` so Safari opens the keyboard inside the tap gesture.
 
 ## Testing
 
@@ -168,6 +168,7 @@ Each with its date and reason, so they are not reopened without a new argument.
 - **Phone team view as a grid of workdays, not a strip per person** (9.11.2026, replaces the two-week strip per person of 7.11.): separate cards with their own unlabelled time axis made it hard to see who works on what on which day. Upright one week (two weeks would leave 34 px per day), the tapped day listed below; sideways two weeks with free horizontal scrolling. A web app cannot force landscape on iOS, so turning the phone switches the view.
 - **Moving topics on the phone by hold and drag** (9.11.2026): the maintainer wants it, and the 60 to 90 px columns are wide enough. Hold first, because swiping is scrolling and the grid is mostly bars. Start and end shift by workdays. Resizing and drag-to-create stay desktop only: thumb-sized edges are too fiddly, the form changes the length.
 - **Folding cards on the phone's "Heute", not closing** (9.11.2026): a closed card hides news such as a new absence; a folded one keeps a summary in its head. "Zu klären" opens again for a new red issue. "Projekte heute" left the phone, the project shows per person in the team day list.
+- **One capture sheet on the phone, only the form below the tabs changes** (9.11.2026): switching to „Abwesend“ used to open another form: the sheet changed height, dropped when the keyboard closed, and the typed text was lost. Now title, tabs and height stay (the sheet is anchored near the top, so a closing keyboard only lengthens it), people are chips everywhere, and typed text survives a switch.
 - **Rarely used functions under "Mehr"** (8.11.2026): contacts, backups, holidays, tour and sign-out sit in "Mehr" on every layout. The sidebar keeps navigation, the team, the shortcut list and the sync status; the repository name shows only in the tooltip and in "Mehr".
 
 ## Pitfalls

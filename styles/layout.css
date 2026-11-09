@@ -17,6 +17,16 @@ button,a,.tag,.tags label span{touch-action:manipulation}
 .seg-b[aria-selected="true"]{background:var(--surface-card);color:var(--text-strong);box-shadow:var(--shadow-sm)}
 #dform[data-me="1"] .kind-g,#dform[data-abs="1"] .kind-g,#dform[data-abs="1"] .due-g{display:none}
 #capPrev{margin:-8px 0 8px}
+.d-top{padding:0 32px}
+.cap-seg{margin-bottom:8px}
+.cap-date{display:grid;gap:0}
+.cap-date .field+.field{margin-top:-6px}
+details.cap-more{border-top:1px solid var(--border-subtle);margin:4px 0 8px}
+details.cap-more summary{display:flex;align-items:center;gap:8px;min-height:48px;cursor:pointer;list-style:none;font-weight:800;color:var(--text-strong)}
+details.cap-more summary::-webkit-details-marker{display:none}
+details.cap-more summary .ic{color:var(--text-muted);transition:transform 200ms var(--ease)}
+details.cap-more[open] summary .ic{transform:rotate(90deg)}
+details.cap-more[open] summary{margin-bottom:8px}
 @media (hover:none){.talk .icon-btn{opacity:1}.todo:hover{background:none}}
 
 /* Laptop: icon bar instead of sidebar */
@@ -219,6 +229,10 @@ body.grid-drag{-webkit-user-select:none;user-select:none}
 .lay-phone .drawer{top:auto;bottom:var(--kb,0px);left:0;right:0;margin:0 auto;width:min(100%,640px);max-height:calc(var(--vvh,100dvh) - 12px - env(safe-area-inset-top,0px));
   border-radius:28px 28px 0 0;transform:translateY(32px)}
 .lay-phone #dform{height:auto;max-height:inherit}
+/* Capture sheet: fixed height, anchored near the top, so the type picker never moves when the type or the keyboard changes */
+.lay-phone .drawer.cap{height:calc(var(--vvh,100dvh) - 12px - env(safe-area-inset-top,0px))}
+.lay-phone .drawer.cap #dform{height:100%}
+.lay-phone .d-top{padding:4px 16px 0}
 .lay-phone .drawer::before{content:"";position:absolute;top:8px;left:50%;width:40px;height:5px;margin-left:-20px;border-radius:999px;background:var(--border-default)}
 .lay-phone .d-head{padding:20px 16px 4px 20px}
 .lay-phone .d-head h3{font-size:22px}

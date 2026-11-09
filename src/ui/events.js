@@ -55,12 +55,12 @@ document.addEventListener('click',async e=>{
       case'disconnect':confirmDisconnect();break;
       case'export':exportData();break;
       case'import':$('#importFile').click();break;
-      case'capture':openCapture('todo');break;
-      case'cap-type':openCapture(a.dataset.v,($('#capText')||$('#dform [name=title]'))?.value||'');break;
+      case'capture':capSheet=null;openCapture('todo');break;
+      case'cap-type':if(a.dataset.v!==capSheet?.type)openCapture(a.dataset.v);break;
       case'more-menu':openMore();break;
       case'region':closeDrawer(false);openRegion();break;
       case'tour':startTour();break;
-      case'onb-quick':if(isPhone())openCapture('todo');else{const q=$('#quick');q?.scrollIntoView({block:'center'});q?.focus()}break;
+      case'onb-quick':if(isPhone()){capSheet=null;openCapture('todo')}else{const q=$('#quick');q?.scrollIntoView({block:'center'});q?.focus()}break;
       case'onb-phone':phoneHint();break;
       case'onb-hide':hideFirstSteps();break;
       case'reload':location.reload();break;
@@ -102,10 +102,13 @@ document.addEventListener('change',e=>{const el=e.target;
     if(iso&&end&&end<iso){to.value=deDate(iso);to.dispatchEvent(new Event('change',{bubbles:true}))}}});
 document.addEventListener('click',e=>{const p=e.target.closest('.date-pick input');if(!p||document.documentElement.classList.contains('touch'))return;
   try{p.showPicker()}catch(err){}}); // Chrome/Edge open the picker only via its own icon; touch devices open it on tap
-/* Capture sheet: due chips and the custom date field are mutually exclusive. */
-document.addEventListener('change',e=>{const f=e.target.form;if(!f||f.id!=='dform'||!drawerCfg?.capture)return;
-  if(e.target.name==='dueDate'&&e.target.value)f.querySelectorAll('input[name=due]').forEach(r=>r.checked=false);
-  if(e.target.name==='due'&&f.dueDate){f.dueDate.value='';const n=f.querySelector('.date-pick input');if(n)n.value=''}capPreview()});
+/* Capture sheet: date chips (due, start, end) and their "Anderes Datum" field (dueDate, startDate, endDate) are mutually exclusive. */
+document.addEventListener('change',e=>{const f=e.target.form,el=e.target;if(!f||f.id!=='dform'||!drawerCfg?.capture)return;
+  const chips=/^(due|start|end)Date$/.test(el.name)?el.name.slice(0,-4):null;
+  if(chips&&el.value)f.querySelectorAll(`input[name=${chips}]`).forEach(r=>r.checked=false);
+  const other=el.type==='radio'&&f.elements[el.name+'Date'];
+  if(other&&other.matches?.('[data-date]')){other.value='';const n=other.closest('.date-in')?.querySelector('input[type=date]');if(n)n.value=''}
+  capPreview()});
 document.addEventListener('keydown',e=>{
   if(Store.mode==='none'||$('#dlg.open')){if(e.key==='Escape'&&$('#dlg.open')){closeDialog()}return}
   if(suggestKey(e)||dpKey(e))return;

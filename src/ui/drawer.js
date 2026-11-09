@@ -1,5 +1,6 @@
 /* Drawer with forms: side panel on desktop, bottom sheet on phone (CSS: .lay-phone .drawer). Same markup.
-   cfg: title, body, submitLabel (missing: close button only), onSubmit, onDelete, deleteLabel, top (above the form, e.g. type picker in capture). */
+   cfg: title, body, submitLabel (missing: close button only), onSubmit, onDelete, deleteLabel, top (above the form inside the scrolling body),
+   head (below the title, outside the scrolling body: the type picker of the capture sheet), capture (capture sheet type, see capture.js). */
 let drawerCfg=null,lastFocus=null;
 const KEEP_OPEN={}; // onSubmit returns this when it opened another form itself
 const field=(label,control)=>`<label class="field"><span class="fl">${label}</span>${control}</label>`;
@@ -29,8 +30,9 @@ function parseWith(text,t){
   return{ids}}
 function setWith(o,ids){const w=ids.filter(id=>id!==o.personId);if(w.length)o.with=w;else delete o.with}
 function openDrawer(cfg){drawerCfg=cfg;const wasOpen=document.body.classList.contains('drawer-open');if(!wasOpen)lastFocus=document.activeElement;
+  $('#drawer').classList.toggle('cap',!!cfg.capture);
   $('#drawer').innerHTML=`<form id="dform" novalidate><header class="d-head"><h3>${esc(cfg.title)}</h3><button type="button" class="icon-btn" data-action="close-drawer" aria-label="Schließen">${ic('x',20)}</button></header>
-    <div class="d-body">${cfg.top||''}${cfg.body}<p class="d-err" role="alert"></p></div><footer class="d-foot">${cfg.onDelete?`<button type="button" class="btn danger sm" data-action="delete">${esc(cfg.deleteLabel||'Löschen')}</button>`:''}
+    ${cfg.head?`<div class="d-top">${cfg.head}</div>`:''}<div class="d-body">${cfg.top||''}${cfg.body}<p class="d-err" role="alert"></p></div><footer class="d-foot">${cfg.onDelete?`<button type="button" class="btn danger sm" data-action="delete">${esc(cfg.deleteLabel||'Löschen')}</button>`:''}
     <span class="sp"></span>${cfg.submitLabel?`<button type="button" class="btn ghost" data-action="close-drawer">Abbrechen</button><button type="submit" class="btn primary">${esc(cfg.submitLabel)}</button>`
       :'<button type="button" class="btn secondary" data-action="close-drawer">Schließen</button>'}</footer></form>`;
   document.body.classList.add('drawer-open');
