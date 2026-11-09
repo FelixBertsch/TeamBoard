@@ -79,11 +79,11 @@ Three rules follow:
 
 Plus `touch` for a coarse pointer.
 
-- **Monitor:** 264 px sidebar. At the bottom: "Mehr" (contacts, backups, holidays, tour, sign-out), the shortcut list (`KEYS`) and the sync status. From 1800 px the right-column panels flow into two columns, from 2200 px into three.
+- **Monitor:** 264 px sidebar. At the bottom: "Mehr" (contacts, backups, holidays, tour, sign-out), the shortcut list (`KEYS`) and the sync status. Below the timeline the cards form a board of equal columns (as many as fit at 420 px, at most four), placed once per page session so they never jump (`placeBoards()`, `docs/ui.md`).
 - **Laptop:** the sidebar becomes a 76 px icon bar (avatars with counters, absence dot, name as `title`). Sync status as a dot; the shortcut list only in "Mehr".
 - **Phone:** own views with the same data, actions and forms. Bottom tab bar: Heute, Team, "+", Ich, Mehr. Forms are bottom sheets. The page scrolls as a whole. Tap targets at least 44 px, inputs at least 16 px font, safe areas via `env(safe-area-inset-*)`. "Heute" has folding cards; "Team" is a grid of workdays (one week upright with the tapped day listed below; sideways, class `lay-land`, two weeks visible in a horizontal scroller without the tab bar). Topic bars there move by hold and drag. Details in `docs/ui.md` and `docs/timeline.md`.
 - **Resize and rotation:** `applyLayout()` runs at once, `render()` only when width or layout area changes. Height-only changes (Safari's address bar, keyboard) never re-render.
-- Decide layout differences via `.lay-phone`/`.lay-rail`/`.lay-land` and `isPhone()`/`isLand()`/`layoutKey()`, never via own media queries. Only wide monitors use `@media (min-width:1800px)` and `2200px`.
+- Decide layout differences via `.lay-phone`/`.lay-rail`/`.lay-land` and `isPhone()`/`isLand()`/`layoutKey()`, never via own media queries. The board counts its columns from its own width.
 
 ## Design
 
@@ -127,7 +127,7 @@ Rules most often broken:
 - **New entry in any list:** `newEntry({...})` (or `newTodo()`), so it gets `id` and `createdAt`.
 - **New field:** handle missing values with `??`; no migration needed. Renames or changed meaning need a `DATA_VERSION` bump and a migration in `normalize()`. A new top-level list goes into `empty()` and `Store.serialize()`. See `docs/data-model.md`.
 - **New action:** element with `data-action="name"` and `data-id`, `case'name':` in `events.js`: change `S`, `save()`, `render()`, `toast(text, true)` for undo.
-- **New panel:** a function returning `<section class="card card-pad">` with `<div class="panel-head"><h2 class="h4">Titel</h2></div>` and `.prow` rows (model: `issuesPanel()`). Desktop into the `.stack` of `viewOverview()`/`viewPerson()`, phone into the `.m-stack` of `viewToday()`/`viewPersonPhone()`. Everything must stay reachable on the iPhone.
+- **New panel:** a function returning `<section class="card card-pad">` with `<div class="panel-head"><h2 class="h4">Titel</h2></div>` and `.prow` rows (model: `issuesPanel()`). Desktop as `[id, html]` into the `boardHTML()` list of `viewOverview()`/`viewPerson()` (`''` = not shown), phone into the `.m-stack` of `viewToday()`/`viewPersonPhone()`. Everything must stay reachable on the iPhone.
 - **New "Zu klären" rule:** push `{kind:'late'|'warn', act, id, pid, text}` in `allIssues(pid)`; `act` is an existing action like `edit-topic`. A yellow rule also sets `ack` (a stable id with its own prefix), `sig` (the date it hangs on) and, if absences cause it, `items`, so it can be acknowledged (`acks` in `docs/data-model.md`).
 - **New setting:** developer setting into `CFG` with a comment; a user setting for every device into `S.settings` via `setSetting()` (document the id in `docs/data-model.md`); a device-only preference into `localStorage` under `KEY`.
 - **New keyboard shortcut:** in the keyboard handler inside `if(!typing&&!open&&…)` and in `KEYS` (`sidebar.js`), which feeds the sidebar footer and "Mehr". Taken: N, W, 2, 6, Ctrl+Z, Esc, Enter.
@@ -163,6 +163,7 @@ Each with its date and reason, so they are not reopened without a new argument.
 - **Holidays per state as a synced setting** (8.11.2026): computed, no data source; every device shows the same days off.
 - **Tour on sample data** (8.11.2026): a tour across an empty board explains nothing. No tour library.
 - **Absence warnings only where the finish of a main topic is at risk** (9.11.2026): long topics that run on the side collected one warning per day off. Topics are main or side topics (`side`); side topics get no absence warnings, main topics only for an absence on the end date or the three workdays before it, or absences over more than half of the remaining workdays. One entry per topic.
+- **Board cards placed once per page session** (9.11.2026): cards below the timeline fill equal columns by height, but keep their place until reload or a change of the column count. Cards that jump while you tick off tasks or open „Mehr anzeigen“ were the bigger annoyance than a less balanced layout.
 - **Acknowledge per warning, not per absence** (9.11.2026): a yellow "Zu klären" entry can be marked as clarified and comes back when its date or its absences change. Red entries (late) cannot be hidden, because they mean the data is wrong.
 - **Phone team view as a grid of workdays, not a strip per person** (9.11.2026, replaces the two-week strip per person of 7.11.): separate cards with their own unlabelled time axis made it hard to see who works on what on which day. Upright one week (two weeks would leave 34 px per day), the tapped day listed below; sideways two weeks with free horizontal scrolling. A web app cannot force landscape on iOS, so turning the phone switches the view.
 - **Moving topics on the phone by hold and drag** (9.11.2026): the maintainer wants it, and the 60 to 90 px columns are wide enough. Hold first, because swiping is scrolling and the grid is mostly bars. Start and end shift by workdays. Resizing and drag-to-create stay desktop only: thumb-sized edges are too fiddly, the form changes the length.

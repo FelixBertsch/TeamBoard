@@ -34,7 +34,7 @@ function viewToday(banner=''){
   ${awayChips()}
   <div class="m-stack">${firstStepsPanel()}
   ${foldCard('todos','Aufgaben',todoSum,`<div class="m-row fold-tags">${filterTags()}</div>${todoListPhone(ui.filter)}`,'','todos')}
-  ${allIssues().length?foldCard('issues','Zu klären',issSum,issuesBody(),issuesToggle(),'issues'):''}
+  ${showIssues()?foldCard('issues','Zu klären',issSum,issuesBody(),issuesToggle(),'issues'):''}
   ${foldCard('abs','Abwesenheiten',absSum,absenceRows(),'<button class="link-btn" data-action="new-absence">Eintragen</button>')}
   ${foldCard('talk','Fürs nächste Gespräch',talks?plural(talks,'ein Punkt','Punkte'):'nichts gesammelt',talkRows())}
   ${historyLink()}</div>`;

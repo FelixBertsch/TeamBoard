@@ -100,6 +100,16 @@ def desktop_flows(pg, name):
     vp = pg.viewport_size; pg.set_viewport_size({"width": 1366 if vp["width"] != 1366 else 1600, "height": vp["height"]}); pg.wait_for_timeout(400)
     c(pg.input_value("#quick") == "Halb getippt" and pg.evaluate("document.activeElement.id") == "quick", "input survives resize")
     pg.set_viewport_size(vp); pg.wait_for_timeout(300)
+    # board below the timeline: equal columns by width, tasks first; cards keep their place while content changes
+    pg.goto(BASE + "?demo=1&nosw=1#uebersicht"); pg.wait_for_timeout(300)
+    cols = lambda: pg.evaluate("[...document.querySelectorAll('#main [data-board=overview] .bcol')].map(c=>[...c.children].map(x=>x.dataset.card).join())")
+    before = cols(); want = 4 if vp["width"] >= 2500 else 3 if vp["width"] >= 1900 else 2
+    c(len(before) == want and before[0].startswith("todos") and overflow(pg) <= 0, f"board with {want} columns, tasks first")
+    pg.evaluate("TB.state().todos.filter(t=>!t.done).slice(0,6).forEach(t=>completeTodo(t));save();render()")
+    if pg.locator("[data-action=abs-more]").count(): pg.click("[data-action=abs-more]")
+    pg.wait_for_timeout(100)
+    c(cols() == before, "cards stay in place when lists shrink or grow")
+    pg.reload(); pg.wait_for_timeout(300)
 
 def phone_flows(pg, name, w, h):
     c = lambda cond, msg: check(cond, f"[{name}] {msg}")
@@ -453,6 +463,11 @@ with sync_playwright() as p:
     pg.locator(".prow.issue.acked", has_text="Stadtwerke Elmstadt").locator("[data-action=unack-issue]").click(); pg.wait_for_timeout(150)
     check(pg.locator(".prow.issue:not(.acked)", has_text="Stadtwerke Elmstadt").count() == 1, "Wieder anzeigen brings it back")
     pg.evaluate("ui.showAcked=false;render()")
+    r = pg.evaluate("""()=>{const S=TB.state();S.topics.forEach(t=>{if(topicLate(t))t.status='erledigt'});
+      for(const i of issues())if(i.ack)ackIssue(i.ack);render();const shown=()=>!!document.querySelector('[data-tour=issues]');
+      const out={left:issues().length,kept:shown()&&document.querySelector('[data-tour=issues]').textContent.includes('Alles geklärt')};
+      ui.keepIss={};render();out.gone=!shown();S.acks=[];render();out.back=shown();return out}""")
+    check(r["left"] == 0 and r["kept"] and r["gone"] and r["back"], "Zu klären stays with Alles geklärt until reload, then hides until something is open")
     r = pg.evaluate("""()=>{const S=TB.state();let m=mondayOf(TDN)+70;while([...Array(28).keys()].some(i=>holidayOn(m+i)))m+=7;
       const t={id:'rk2',personId:'aylin',title:'Quittierthema',start:ds(m),end:ds(m+18),status:'geplant',note:''};S.topics.push(t);
       S.absences.push({id:'rkd',personId:'aylin',kind:'Urlaub',start:ds(m+17),end:ds(m+17)});

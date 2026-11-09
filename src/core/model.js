@@ -85,7 +85,7 @@ const hasSetting=id=>(S.settings||[]).some(s=>s.id===id);
 function setSetting(id,value){const x=S.settings.find(s=>s.id===id);if(x)x.value=value;else S.settings.push({id,value})}
 let S=empty();
 lastSaved=JSON.stringify(S);
-const ui={showAcked:false,absAll:false,filter:'alle',tab:{},forPid:'',off:0,range:['week','two','six'].includes(CFG.defaultView)?CFG.defaultView:'week',more:false,showDone:false,
+const ui={boards:{},keepIss:{},showAcked:false,absAll:false,filter:'alle',tab:{},forPid:'',off:0,range:['week','two','six'].includes(CFG.defaultView)?CFG.defaultView:'week',more:false,showDone:false,
   hist:{type:'alle',pid:'',q:'',weeks:8},year:{}, // hist: filters of the history view; year: review year per person
   fold:{todos:true,issues:true,abs:false,talk:false},redSeen:[],grp:{}, // phone "Heute": open cards, red issues seen when folding, open todo groups
   toff:0,tday:null,lgX:null}; // phone team grid: week offset and tapped day upright, scroll position sideways

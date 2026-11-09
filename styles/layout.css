@@ -17,17 +17,6 @@ button,a,.tag,.tags label span{touch-action:manipulation}
 .seg-b[aria-selected="true"]{background:var(--surface-card);color:var(--text-strong);box-shadow:var(--shadow-sm)}
 #dform[data-me="1"] .kind-g,#dform[data-abs="1"] .kind-g,#dform[data-abs="1"] .due-g{display:none}
 #capPrev{margin:-8px 0 8px}
-@media (max-width:1179px){.split{grid-template-columns:minmax(0,1fr)}}
-/* Wide monitor: right-column panels flow into columns */
-@media (min-width:1800px){
-  .split{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
-  .split>.stack{display:block;columns:2;column-gap:24px}
-  .split>.stack>*{break-inside:avoid;margin-bottom:24px}
-}
-@media (min-width:2200px){
-  .split{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
-  .split>.stack{columns:3}
-}
 @media (hover:none){.talk .icon-btn{opacity:1}.todo:hover{background:none}}
 
 /* Laptop: icon bar instead of sidebar */
@@ -50,7 +39,6 @@ button,a,.tag,.tags label span{touch-action:manipulation}
 .lay-rail .head-id .av.wg-land{width:52px;height:52px;font-size:17px}
 .lay-rail .lead{font-size:16px;margin-top:6px}
 .lay-rail .tl-top{padding:16px 20px;gap:12px}
-@media (min-width:1000px) and (max-width:1179px){.lay-rail .split{grid-template-columns:minmax(0,58fr) minmax(0,42fr)}}
 
 /* Phone: bottom tab bar, the page scrolls as a whole, forms as bottom sheet */
 html.lay-phone,.lay-phone body{height:auto}

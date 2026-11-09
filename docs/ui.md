@@ -6,7 +6,7 @@ Function index of `src/ui/`, UI state and routes. Use it to find things; the cod
 
 | File | Contents |
 | --- | --- |
-| `layout.js` | `MQ_PHONE`, `isPhone()`, `isLand()`, `layoutKey()`, `applyLayout()` |
+| `layout.js` | `MQ_PHONE`, `isPhone()`, `isLand()`, `layoutKey()`, `applyLayout()`; the board of cards below the timeline (`boardHTML()`, `placeBoards()`, see below) |
 | `icons.js` | `ICONS` (Lucide paths) and `ic(name, size, stroke)` |
 | `feedback.js` | `toast(text, withUndo)`, `showDialog()`, `closeDialog()` |
 | `sidebar.js` | `renderSide()`: sidebar, icon bar or phone tab bar. `KEYS`/`keysHTML()` (shortcut list for the sidebar footer and "Mehr"), `MORE_SUB()` |
@@ -31,6 +31,8 @@ Function index of `src/ui/`, UI state and routes. Use it to find things; the cod
 `ui` holds what does not belong in the data: `filter`, `tab` (per person), `forPid` (filter "Für" in "Meine Planung"), `off` (week offset), `range` (`week`/`two`/`six`), `more`, `showDone`, `hist` (history filters: `type`, `pid`, `q`, `weeks`), `year` (review year per person), on the phone `fold` (open cards of "Heute"), `redSeen` (red issues present when "Zu klären" was folded), `grp` (open todo groups), `toff` and `tday` (week and day of the upright team grid), `lgX` (scroll position of the sideways grid). `range`, `fold` and `redSeen` are remembered per device (`saveUi()`, `teamboard.v1.ui`).
 
 Routes: `#uebersicht`, `#ich`, `#ma-<personId>`, `#team` (phone team view; desktop shows the overview), `#verlauf` (history, desktop and phone). Unknown hashes show the overview. On the phone the overview is called "Heute" (`viewToday()`); the history is reached via "Mehr" and the link at the end of "Heute".
+
+Board (overview and person page on laptop and monitor): the cards below the timeline sit in columns of equal width, as many as fit at 420 px each, at most four (`placeBoards()` measures the board). The tasks card heads the first column, every other card goes in its order into the column that is shortest at that moment. This placement is kept for the page session in `ui.boards` (per board: overview, `p-<person>`), so cards never jump when their content changes; they only move down when a card above them grows. A card that appears later goes to the bottom of the shortest column. Reloading or a change of the column count places all cards anew. "Zu klären" stays for the session once shown (`showIssues()`, `ui.keepIss`), with „Alles geklärt.“ after the last one is cleared.
 
 Phone "Heute": the todo list shows overdue and today, "Rest der Woche", "Nächste Woche" and "Später" are folded groups. Todos, "Zu klären", absences and talking points are folding cards (`foldCard()`): the head is one button with title, summary and chevron, an action of the panel ("Eintragen", "n geklärte anzeigen") sits beside it while open. The bodies come from the same functions as the desktop panels (`absenceRows()`, `talkRows()`, `issuesBody()`/`issuesToggle()`). "Zu klären" opens by itself when a red issue appears that was not there when it was folded (`redKeys()` against `ui.redSeen`): red issues must not be hidden. "Projekte heute" is desktop only.
 

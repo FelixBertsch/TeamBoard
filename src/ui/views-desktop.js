@@ -108,8 +108,8 @@ function viewOverview(banner=''){
   ${quickBlock()}
   ${tlSection(['me',...team().map(p=>p.id)])}
   ${team().length?'':`<p class="empty">Noch kein Teammitglied angelegt. Links unter „Person hinzufügen“ legst du die erste Person an.</p>`}
-  <div class="split"><section class="card card-pad" data-tour="todos"><div class="sec-head"><h2 class="h4">Offene Aufgaben</h2><span class="sp"></span>${filterTags()}</div>${todoListHTML(ui.filter)}</section>
-  <div class="stack">${issuesPanel()}${projectsPanel()}${absencePanel()}${talkCountPanel()}</div></div></div>`;
+  ${boardHTML('overview',[['todos',`<section class="card card-pad" data-tour="todos"><div class="sec-head"><h2 class="h4">Offene Aufgaben</h2><span class="sp"></span>${filterTags()}</div>${todoListHTML(ui.filter)}</section>`],
+    ['issues',issuesPanel()],['projects',projectsPanel()],['absences',absencePanel()],['talks',talkCountPanel()]])}</div>`;
 }
 
 /* ----- Person page and "Meine Planung" ----- */
@@ -186,6 +186,6 @@ function viewPerson(id,banner=''){
   <p class="lead">${esc(arch?`${firstName(p)} ist nicht mehr im Team. Themen, Aufgaben und Projekte bleiben hier und im Verlauf.`:personHeadline(p))}</p>
   ${arch?'':quickBlock()}
   ${tlSection([id])}
-  <div class="split"><section class="card card-pad" data-tour="tasks">${x.tasks}</section>
-  <div class="stack">${issuesPanel(id)}${x.involved}${x.talkPanel}${x.asgPanel}${x.topicsPanel}${x.absPanel}${x.review}</div></div></div>`;
+  ${boardHTML('p-'+id,[['tasks',`<section class="card card-pad" data-tour="tasks">${x.tasks}</section>`],['issues',issuesPanel(id)],['involved',x.involved],
+    ['talks',x.talkPanel],['projects',x.asgPanel],['topics',x.topicsPanel],['absences',x.absPanel],['review',x.review]])}</div>`;
 }

@@ -50,9 +50,12 @@ const issues=pid=>allIssues(pid).filter(i=>!isAcked(i));
 /* Acknowledge an issue by its ack id; drops entries whose issue no longer exists, so the list does not grow. Caller saves. */
 function ackIssue(ack){const all=allIssues(),i=all.find(x=>x.ack===ack);if(!i)return false;
   S.acks=(S.acks||[]).filter(a=>a.id!==ack&&all.some(x=>x.ack===a.id));S.acks.push({id:ack,sig:i.sig,items:i.items||[],at:TODAY});return true}
-/* Panel: open issues with a check button on yellow ones; "n geklärte anzeigen" lists acknowledged ones muted, to bring them back. */
+/* Panel: open issues with a check button on yellow ones; "n geklärte anzeigen" lists acknowledged ones muted, to bring them back.
+   Shown when something is open. Once shown it stays for the page session (ui.keepIss, also on the phone), with „Alles geklärt.“
+   after the last one is cleared, so the cards around it do not move; after a reload it is gone until something is open again. */
+const showIssues=pid=>{const k=pid||'';if(issues(pid).length)ui.keepIss[k]=true;return!!ui.keepIss[k]};
 function issuesPanel(pid){
-  if(!allIssues(pid).length)return'';
+  if(!showIssues(pid))return'';
   return`<section class="card card-pad" data-tour="issues"><div class="panel-head"><h2 class="h4">Zu klären</h2>${issuesToggle(pid)}</div>${issuesBody(pid)}</section>`;
 }
 /* Head button "n geklärte anzeigen" and the rows of issuesPanel(); the phone's folding card uses them separately. */

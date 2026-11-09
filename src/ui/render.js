@@ -18,5 +18,5 @@ function render(){
     :Store.outdated?`<div class="banner">Eine neuere Version des Teamboards hat gespeichert. Bis zum Neuladen synchronisiert dieses Fenster nicht, deine Änderungen bleiben auf dem Gerät.<span class="sp"></span><button class="btn accent sm" data-action="reload">Neu laden</button></div>`:'';
   $('#main').innerHTML=r.view==='history'?viewHistory(banner):k==='phone'?(r.view==='overview'?viewToday(banner):r.view==='team'?viewTeam(banner):viewPersonPhone(r.id,banner))
     :(r.view==='person'?viewPerson(r.id,banner):viewOverview(banner));
-  restoreFields(keep);restoreGridScroll();
+  placeBoards();restoreFields(keep);restoreGridScroll();
   if(refocusQuick){$('#quick')?.focus();refocusQuick=false}}
