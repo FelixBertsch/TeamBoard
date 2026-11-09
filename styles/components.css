@@ -163,6 +163,7 @@ h3{font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.02em;color:v
 .col.td{background:var(--today)}
 .abs{position:absolute;top:0;bottom:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(135deg,var(--abs) 0 6px,transparent 6px 12px)}
 .abs-label{pointer-events:auto;position:absolute;bottom:4px;left:6px;border:0;background:none;padding:0 4px;font-size:12px;font-weight:800;color:var(--text-muted);cursor:pointer;white-space:nowrap;line-height:16px}
+.abs.half .abs-label{left:2px;padding:0 2px}
 .abs-label:hover{color:var(--text-strong);text-decoration:underline}
 .bar{position:absolute;height:30px;border-radius:999px;padding:0 14px;display:flex;align-items:center;gap:6px;z-index:3;font-size:13px;font-weight:700;
   white-space:nowrap;overflow:hidden;cursor:grab;user-select:none;touch-action:none;transition:box-shadow 120ms var(--ease)}

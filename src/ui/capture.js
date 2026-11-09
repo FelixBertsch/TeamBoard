@@ -27,18 +27,19 @@ function openCapture(type='todo',keep=null,preset={}){
   const base={title:'Neu erfassen',head,capture:type};
   if(type==='absence'){
     const last=capSheet.absence||{},a={pid:preset.personId||last.pid||pid,kind:preset.kind||last.kind||'Urlaub',start:preset.start||last.start||last.startDate||TODAY,
-      end:preset.end||last.end||last.endDate||'',note:preset.note??last.note??''};
+      end:preset.end||last.end||last.endDate||'',note:preset.note??last.note??'',half:preset.half||last.half||''};
     const fc=fromChoices(),tc=toChoices(),sv=chipVal(fc,a.start),ev=a.end&&a.end!==a.start?chipVal(tc,a.end):''; // null: not a chip, the date field holds it
     openDrawer({...base,submitLabel:'Eintragen',
       body:group('Wer',radios('pid',people,a.pid))
         +group('Art',radios('kind',[['Urlaub','Urlaub'],['Krank','Krank'],['Schulung','Schulung'],['Sonstiges','Abwesend']],a.kind))
         +`<div class="cap-date">${group('Von',radios('start',fc,sv))+field('Anderes Datum',dateIn('startDate',sv==null?a.start:''))}</div>`
         +`<div class="cap-date">${group('Bis',radios('end',tc,ev))+field('Anderes Datum',dateIn('endDate',ev==null?a.end:''))}</div>`
+        +halfGroup(a.half,!a.end||a.end===a.start)
         +`<div class="abs-note">${field('Notiz',`<input name="note" value="${esc(a.note)}" autocomplete="off" placeholder="z. B. Vertretung durch Lena">`)}</div>`
         +`<p class="d-note abs-sick">Bei Krankheit speichert das Teamboard keine Details. ${CFG.sickVisibleDays} Tage nach dem Ende steht dort nur noch „Abwesend“.</p>`
         +'<p class="qprev" id="capPrev" aria-live="polite"></p>',
       onSubmit:v=>{const r=capAbsence(v);if(r.err)return r.err;
-        const note=r.kind==='Krank'?'':(v.note||'').trim();toast(addAbsence({personId:r.personId,absKind:r.kind,start:r.start,end:r.end,...(note?{note}:{})}),true)}});
+        const note=r.kind==='Krank'?'':(v.note||'').trim();toast(addAbsence({personId:r.personId,absKind:r.kind,start:r.start,end:r.end,half:r.half,...(note?{note}:{})}),true)}});
     capPreview();return;
   }
   if(type==='topic'){
@@ -75,8 +76,8 @@ function openCapture(type='todo',keep=null,preset={}){
       +`<div class="kind-g">${group('Art',radios('kind',[['team','Aufgabe der Person'],['mine','Mein To-do'],['waiting','Wartet auf']],last.kind||c.kind))}</div>`
       +`<div class="due-g cap-date">${group('Fällig',radios('due',dueChoices(),last.dueDate?null:last.due||''))+field('Anderes Datum',dateIn('dueDate',last.dueDate||''))}</div>`
       +'<p class="qprev" id="capPrev" aria-live="polite"></p>',
-    onSubmit:v=>{const r=parseQuick(v.title||'',{personId:v.pid||'me',kind:v.kind||'team'});if(r.ambiguous)return ambiguousText(r);
-      if(r.type==='absence'){capSheet.text='';capSheet.absence=null;openCapture('absence','',{personId:r.personId,kind:r.absKind,start:r.start,end:r.end,note:r.note});capSheet.text='';return KEEP_OPEN}
+    onSubmit:v=>{const r=parseQuick(v.title||'',{personId:v.pid||'me',kind:v.kind||'team'});if(r.ambiguous)return ambiguousText(r);if(r.err)return r.err;
+      if(r.type==='absence'){capSheet.text='';capSheet.absence=null;openCapture('absence','',{personId:r.personId,kind:r.absKind,start:r.start,end:r.end,note:r.note,half:r.half});capSheet.text='';return KEEP_OPEN}
       if(!r.title)return'Bitte gib einen Titel ein.';
       const n=newTodo({...r,due:r.due||v.dueDate||v.due||null});save();
       toast(`${kindLabel(n.kind,personOf(n.personId))} angelegt`,true)}});
@@ -86,16 +87,17 @@ function openCapture(type='todo',keep=null,preset={}){
 function capAbsence(v){const start=v.startDate||v.start||'';let end=v.endDate||v.end||start;
   if(!start)return{err:'Bitte wähle, ab wann.'};
   if(end<start)return{err:'Das Ende liegt vor dem Beginn. Bitte wähle ein späteres Ende.'};
-  return{personId:v.pid||'me',kind:v.kind||'Urlaub',start,end}}
+  return{personId:v.pid||'me',kind:v.kind||'Urlaub',start,end,half:start===end&&HALF[v.half]?v.half:null}}
 function capPreview(){
   const f=$('#dform'),el=$('#capPrev');if(!f||!el)return;const{v}=formValues(f);
-  if(capSheet?.type==='absence'){const r=capAbsence(v);
-    el.innerHTML=r.err?`<span class="warn">${esc(r.err)}</span>`:absPreview({personId:r.personId,absKind:r.kind,start:r.start,end:r.end});return}
+  if(capSheet?.type==='absence'){const r=capAbsence(v),g=f.querySelector('.half-g');if(g)g.hidden=!!(r.start&&r.end!==r.start);
+    el.innerHTML=r.err?`<span class="warn">${esc(r.err)}</span>`:absPreview({personId:r.personId,absKind:r.kind,start:r.start,end:r.end,half:r.half});return}
   const r=parseQuick(v.title||'',{personId:v.pid||'me',kind:v.kind||'team'}),due=r.due||v.dueDate||v.due||(r.repeat?TODAY:null);
   f.dataset.me=r.personId==='me'?'1':'0';f.dataset.abs=r.type==='absence'?'1':'0';
   const sb=f.querySelector('button[type=submit]');if(sb)sb.textContent=r.type==='absence'?'Weiter':'Aufgabe anlegen';
   const unk=r.unknown?`<span class="warn">${esc(unknownText(r.unknown))}</span>`:'';
   if(r.ambiguous){el.innerHTML=`<span class="warn">${esc(ambiguousText(r))}</span>`;return}
+  if(r.err){el.innerHTML=`<span class="warn">${esc(r.err)}</span>`;return}
   if(r.type==='absence'){el.innerHTML=absPreview(r)+unk+'<span class="enter">Weiter zu „Abwesend“</span>';return}
   el.innerHTML=todoPreview(r,due)+unk;
 }

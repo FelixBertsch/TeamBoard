@@ -99,7 +99,8 @@ document.addEventListener('change',e=>{const el=e.target;
   if(el.matches('.date-pick input')){const t=el.closest('.date-in').querySelector('[data-date]');t.value=deDate(el.value);t.dispatchEvent(new Event('change',{bubbles:true}));return}
   if(el.matches('[data-date]')){const iso=parseDeDate(el.value);if(iso)el.value=deDate(iso);const n=el.closest('.date-in').querySelector('input[type=date]');if(n)n.value=iso||'';
     const to=el.dataset.to&&el.form?.elements[el.dataset.to],end=to&&parseDeDate(to.value);
-    if(iso&&end&&end<iso){to.value=deDate(iso);to.dispatchEvent(new Event('change',{bubbles:true}))}}});
+    if(iso&&end&&end<iso){to.value=deDate(iso);to.dispatchEvent(new Event('change',{bubbles:true}))}
+    syncHalf(el.form)}});
 document.addEventListener('click',e=>{const p=e.target.closest('.date-pick input');if(!p||document.documentElement.classList.contains('touch'))return;
   try{p.showPicker()}catch(err){}}); // Chrome/Edge open the picker only via its own icon; touch devices open it on tap
 /* Capture sheet: date chips (due, start, end) and their "Anderes Datum" field (dueDate, startDate, endDate) are mutually exclusive. */

@@ -25,8 +25,8 @@ function renderSide(r){
   <a class="nav" href="#verlauf" title="Verlauf"${r.view==='history'?' aria-current="page"':''}><span class="nav-icon">${ic('history',16)}</span><span class="nm"><b>Verlauf</b><small>Erledigtes, Urlaub, Projekte</small></span></a>
   <div class="side-label">Team</div>`;
   for(const p of team()){const a=absentOn(p.id,TODAY),n=open.filter(t=>t.personId===p.id&&t.kind==='team').length;
-    h+=`<a class="nav" href="${hrefOf(p.id)}" title="${esc(p.name)}${a?`, ${esc(absLabel(a.kind))} bis ${dm(a.end)}`:projectLabel(p.id)?`, ${esc(projectLabel(p.id))}`:''}"${cur(p.id)}>${avatar(p)}${a?'<span class="adot"></span>':''}<span class="nm"><b>${esc(p.name)}</b>
-      <small>${a?`<span class="dot"></span>${esc(absLabel(a.kind))} bis ${dm(a.end)}`:esc(teamLine(p)||'Kein Team')}</small></span>${n?`<span class="cnt">${n}</span>`:''}</a>`}
+    h+=`<a class="nav" href="${hrefOf(p.id)}" title="${esc(p.name)}${a?`, ${esc(absLabel(a.kind))} ${a.half?HALF[a.half]:'bis '+dm(a.end)}`:projectLabel(p.id)?`, ${esc(projectLabel(p.id))}`:''}"${cur(p.id)}>${avatar(p)}${a?'<span class="adot"></span>':''}<span class="nm"><b>${esc(p.name)}</b>
+      <small>${a?`<span class="dot"></span>${esc(absLabel(a.kind))} ${a.half?HALF[a.half]:'bis '+dm(a.end)}`:esc(teamLine(p)||'Kein Team')}</small></span>${n?`<span class="cnt">${n}</span>`:''}</a>`}
   h+=`<button class="nav add" data-action="new-person" title="Person hinzufügen" aria-label="Person hinzufügen"><span class="nav-icon">${ic('userPlus',16)}</span><span class="nm"><b>Person hinzufügen</b></span></button>
   <div class="side-low" data-tour="more">
   <button class="nav more-btn" data-action="more-menu" title="Mehr: Kontakte, Sicherung, Feiertage, Rundgang" aria-label="Mehr"><span class="nav-icon">${ic('more',16,2.5)}</span><span class="nm"><b>Mehr</b><small>${MORE_SUB()}</small></span></button>

@@ -10,15 +10,16 @@ function spanLabel(a,b){const lo=Math.min(a,b),hi=Math.max(a,b),n=hi-lo+1;return
 /* Inline field after drag-to-create. Plain text becomes a topic, as before. A tag turns it into something else for the dragged
    person and range: #urlaub, #krank, #schulung, #abwesend an absence over the range; #ich, #meins, #wartet a todo due on the
    last dragged day ("bis Fr" overrides). With a tag the text goes through parseQuick(), so "@Name" works there too. */
-const INLINE_TAG=/(^|\s)#(ich|meins|wartet|urlaub|krank|schulung|abwesend|(zwei)?w(ö|o|oe)chentlich|monatlich|quartalsweise|j(ä|a|ae)hrlich)(?=\s|$)/i;
+const INLINE_TAG=/(^|\s)#(ich|meins|wartet|urlaub|krank|schulung|abwesend|vormittags|nachmittags|(zwei)?w(ö|o|oe)chentlich|monatlich|quartalsweise|j(ä|a|ae)hrlich)(?=\s|$)/i;
 function inlineParse(raw,pid,lo,hi){
   if(!INLINE_TAG.test(raw))return{type:'topic',title:raw.trim()};
   const r=parseQuick(raw,{personId:pid,kind:'team'});
-  return r.type==='absence'?{...r,start:ds(lo),end:ds(hi)}:{...r,due:r.due||ds(hi)}}
+  return r.type==='absence'?{...r,start:ds(lo),end:ds(hi),err:r.half&&lo!==hi?HALF_ONE_DAY:null}:{...r,due:r.due||ds(hi)}}
 function inlineHint(inp){
   const lo=+inp.dataset.lo,hi=+inp.dataset.hi,r=inlineParse(inp.value,inp.dataset.person,lo,hi),span=spanLabel(lo,hi);let s;
   if(r.type==='topic')s=`${span}, Esc bricht ab`;
   else if(r.ambiguous)s=ambiguousText(r);
+  else if(r.err)s=r.err;
   else{const p=personOf(r.personId),who=p.id==='me'?'Ich':firstName(p);
     if(r.type==='absence'){const over=S.absences.find(a=>a.personId===r.personId&&a.start<=r.end&&a.end>=r.start);
       s=`Abwesenheit: ${who} ${absPhrase(r.absKind)}, ${span}${r.dropped?', ohne Text':''}${over?`, überschneidet ${absLabel(over.kind)} ${dm(over.start)} bis ${dm(over.end)}`:''}`}
@@ -34,9 +35,9 @@ function inlineCreate(track,a,b){
     aria-label="Neues Thema, mit # eine Abwesenheit oder ein To-do" placeholder="Titel des Themas, # für Abwesenheit oder To-do"><small>${esc(spanLabel(lo,hi))}, Esc bricht ab</small>`;
   track.appendChild(el);const inp=el.querySelector('input');let done=false;
   const finish=commit=>{if(done)return;const r=inlineParse(inp.value,pid,lo,hi);
-    if(commit&&(r.ambiguous||(r.type==='todo'&&!r.title))&&document.activeElement===inp)return; // Enter: keep the field until it is fixed
+    if(commit&&(r.ambiguous||r.err||(r.type==='todo'&&!r.title))&&document.activeElement===inp)return; // Enter: keep the field until it is fixed
     done=true;closeSuggest();
-    if(!commit||r.ambiguous){el.remove();return}
+    if(!commit||r.ambiguous||r.err){el.remove();return}
     if(r.type==='absence'){const msg=addAbsence(r);render();toast(msg,true);return}
     if(r.type==='todo'&&r.title){newTodo(r);save();render();
       toast(`${kindLabel(r.kind,personOf(r.personId))} angelegt, fällig ${dueLabel(r.due)}`,true);return}

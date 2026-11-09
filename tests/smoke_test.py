@@ -434,6 +434,14 @@ with sync_playwright() as p:
     check(pg.evaluate("(a=>a&&a.kind==='Krank'&&a.end>a.start&&!a.note)(TB.state().absences.find(a=>a.personId==='lena'&&a.kind==='Krank'))"), "#krank creates a sick day without details")
     r = pg.evaluate("parseQuick('@Jonas #urlaub ab 22.12. bis 2.1. Vertretung Tobias',{personId:'me',kind:'team'})")
     check(r["type"] == "absence" and r["start"][5:] == "12-22" and r["end"][5:] == "01-02" and r["end"] > r["start"] and r["note"] == "Vertretung Tobias", "#urlaub with ab and bis across the new year")
+    r = pg.evaluate("parseQuick('@Jonas #urlaub #vormittags am 23.12.',{personId:'me',kind:'team'})")
+    check(r["type"] == "absence" and r["half"] == "am" and r["start"] == r["end"] and not r.get("err"), "#vormittags makes a half day")
+    r = pg.evaluate("parseQuick('@Jonas #urlaub #nachmittags ab 22.12. bis 23.12.',{personId:'me',kind:'team'})")
+    check(bool(r.get("err")) and "einzelnen Tag" in r["err"], "a half day needs a single day")
+    r = pg.evaluate("parseQuick('Termin #vormittags',{personId:'me',kind:'team'})")
+    check(bool(r.get("err")) and "#urlaub" in r["err"], "#vormittags without an absence tag creates nothing")
+    r = pg.evaluate("(a=>[absDays(a),daysText(absDays(a)),daysText(2.5)])({start:'2026-12-23',end:'2026-12-23',half:'am'})")
+    check(r == [0.5, "ein halber Arbeitstag", "2,5 Arbeitstage"], "a half day counts half a workday")
     pg.evaluate("S=TB.state();S.absences.push({id:'old8',personId:'mira',kind:'Krank',start:ds(TDN-9),end:ds(TDN-8),note:'x'},{id:'old6',personId:'mira',kind:'Krank',start:ds(TDN-6),end:ds(TDN-6)});expireSick()")
     check(pg.evaluate("(S=>S.absences.find(a=>a.id==='old8').kind==='Sonstiges'&&!S.absences.find(a=>a.id==='old8').note&&S.absences.find(a=>a.id==='old6').kind==='Krank')(TB.state())"), "sick days turn into Abwesend after 7 days")
     pg.evaluate("location.hash='verlauf'"); pg.wait_for_timeout(150)
@@ -468,6 +476,11 @@ with sync_playwright() as p:
     check(r["blocks"][0][0] and r["blocks"][0][1] == r["first"] and r["blocks"][0][2] == 2 and len(r["blocks"]) == 3, "pieces of leave across a weekend form one block, other kinds stay apart")
     check(len(r["few"]) == 1 and "2 Einträge" in r["few"][0], "the overview shows only the next absence block per person")
     check(len(r["all"]) == 3, "Mehr anzeigen lists every block")
+    r = pg.evaluate("""()=>{const S=TB.state();let m=mondayOf(TDN)+70;while([...Array(28).keys()].some(i=>holidayOn(m+i)))m+=7;
+      const t={id:'rk3',personId:'aylin',title:'Halbtagsthema',start:ds(m),end:ds(m+18),status:'geplant',note:''};S.topics.push(t);
+      S.absences.push({id:'rkh',personId:'aylin',kind:'Urlaub',start:ds(m+18),end:ds(m+18),half:'pm'});const out=absRisk(t);
+      S.topics=S.topics.filter(x=>x!==t);S.absences=S.absences.filter(a=>a.id!=='rkh');render();return out}""")
+    check(r is None, "a half day near the end raises no warning")
     # acknowledging a yellow issue hides it until its date or its absences change; red ones have no check button
     row = pg.locator(".prow.issue", has_text="Stadtwerke Elmstadt")
     row.locator("[data-action=ack-issue]").click(); pg.wait_for_timeout(150)
@@ -578,6 +591,16 @@ with sync_playwright() as p:
     pg.click("#dform [name=end] ~ .date-pick"); pg.wait_for_timeout(100); pg.click(f"#dp [data-dp='{d2+3}']"); pg.wait_for_timeout(100)
     check(pg.locator("#dp").count() == 0 and pg.input_value("#dform [name=start]") == iso(d2+1) and pg.input_value("#dform [name=end]") == iso(d2+3), "range: the end field picks only the end")
     pg.keyboard.press("Escape"); pg.wait_for_timeout(100)
+    # half days: „Tageszeit“ only for a single day, saved as half, drawn over half the day column
+    pg.evaluate("openAbsence(null,{personId:'lena'})"); pg.wait_for_timeout(150)
+    check(pg.is_visible("#dform .half-g"), "Tageszeit shows for a single day")
+    pg.fill("#dform [name=end]", pg.evaluate("deDate(ds(TDN+3))")); pg.dispatch_event("#dform [name=end]", "change"); pg.wait_for_timeout(50)
+    check(not pg.is_visible("#dform .half-g"), "Tageszeit hides for several days")
+    pg.fill("#dform [name=end]", pg.evaluate("deDate(TODAY)")); pg.dispatch_event("#dform [name=end]", "change"); pg.wait_for_timeout(50)
+    pg.click("#dform label:has(input[name=half][value=am])"); pg.click("#dform button[type=submit]"); pg.wait_for_timeout(150)
+    check(pg.evaluate("TB.state().absences.some(a=>a.personId==='lena'&&a.start===TODAY&&a.end===TODAY&&a.half==='am')"), "a half day is saved with half")
+    check(pg.locator(".abs.half").count() >= 1, "the timeline draws the half day")
+    pg.evaluate("(S=>{S.absences=S.absences.filter(a=>!(a.personId==='lena'&&a.half));render()})(TB.state())")
     # holidays per state: computed per year, shown in the timeline, left out of workday counts, flagged under "Zu klären"
     check(pg.evaluate("[2024,2025,2026,2027,2038].map(y=>ds(easterSunday(y))).join()") == "2024-03-31,2025-04-20,2026-04-05,2027-03-28,2038-04-25", "Easter dates")
     counts = pg.evaluate("['','HE','BY','BE','SN','TH','HH'].map(r=>Object.keys(holidaysOf(2027,r)).length).join()")

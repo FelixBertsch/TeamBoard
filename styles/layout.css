@@ -137,6 +137,7 @@ html.lay-phone,.lay-phone body{height:auto}
 .wg-c.sel{background:var(--navy-50)}
 .wg-c.td{background:var(--today)}
 .wg-a{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,var(--abs) 0 5px,transparent 5px 10px);pointer-events:none}
+.wg-a.half span{display:none} /* too narrow; the day list below names it */
 .wg-a span{position:absolute;bottom:3px;left:6px;font-size:11px;font-weight:800;line-height:14px;color:var(--text-muted);white-space:nowrap}
 .wg-b{position:absolute;z-index:2;height:26px;border-radius:999px;border:0;padding:0 9px;display:flex;align-items:center;gap:4px;font:700 12px/26px var(--font);
   white-space:nowrap;overflow:clip;text-align:left;cursor:pointer;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation;

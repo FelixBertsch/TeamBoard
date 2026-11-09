@@ -101,7 +101,8 @@ function timeline(ids){
     const proj=projectLabel(id,S.assignments.filter(a=>a.personId===id&&asgOverlaps(a,ds(T.start),ds(T.end))).sort(asgSort));
     rows+=`<div class="tl-row" style="height:${h}px"><a class="tl-label" href="${hrefOf(id)}">${avatar(p,'sm')}<span class="ln"><span>${esc(p.id==='me'?'Ich':p.name)}</span>${proj?`<small>${esc(proj)}</small>`:''}</span></a>
       <div class="tl-track" data-person="${id}" style="width:${T.width}px">${bg}
-      ${abs.map(a=>{const x=pos(a.start,a.end);return`<div class="abs" style="left:${x.l-3}px;width:${x.w+6}px"><button class="abs-label" data-action="edit-absence" data-id="${a.id}" title="${esc(absLabel(a.kind))}, ${dm(a.start)} bis ${dm(a.end)}">${esc(absLabel(a.kind))}</button></div>`}).join('')}
+      ${abs.map(a=>{const x=pos(a.start,a.end),hw=x.w/2,l=a.half?(a.half==='pm'?x.l+hw:x.l-3):x.l-3,w=a.half?hw+3:x.w+6; // half day: morning left, afternoon right
+        return`<div class="abs${a.half?' half':''}" style="left:${l}px;width:${w}px"><button class="abs-label" data-action="edit-absence" data-id="${a.id}" title="${esc(absLabel(a.kind))}, ${esc(absWhen(a))}">${esc(absLabel(a.kind))}${a.half?', '+HALF_SHORT[a.half]:''}</button></div>`}).join('')}
       ${placed.map(({t,l})=>barHTML(t,l,tones[t.id])).join('')}${inv.placed.map(({t,l})=>wbarHTML(t,wTop+l*WLANE)).join('')}${chips}<div class="tl-ghost" hidden></div></div></div>`;
   }
   return`<div class="tl"><div class="tl-grid" style="width:${LABEL+T.width}px;--label:${LABEL}px">${headHTML()}${rows}</div></div>`;

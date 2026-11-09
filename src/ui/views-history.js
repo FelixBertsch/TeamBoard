@@ -11,7 +11,7 @@ function historyEvents(){
   for(const t of S.talks)if(t.done)ev.push({type:'talk',day:t.doneAt||null,pid:t.personId,title:t.text,sub:'Besprochen',act:'edit-talk',id:t.id});
   for(const t of S.topics)if(t.status==='erledigt')ev.push({type:'topic',day:t.doneAt||t.end,pid:t.personId,title:t.title,sub:`Thema ${dm(t.start)} bis ${dm(t.end)}`,act:'edit-topic',id:t.id});
   for(const a of S.absences)if((a.kind==='Urlaub'||a.kind==='Schulung')&&a.start<=TODAY)
-    ev.push({type:'absence',day:a.start,pid:a.personId,title:`${a.kind} ${dm(a.start)} bis ${dm(a.end)}`,sub:daysText(workdays(a.start,a.end)),act:'edit-absence',id:a.id});
+    ev.push({type:'absence',day:a.start,pid:a.personId,title:`${a.kind} ${absWhen(a)}`,sub:daysText(absDays(a)),act:'edit-absence',id:a.id});
   for(const a of S.assignments){
     if(a.start<=TODAY)ev.push({type:'project',day:a.start,pid:a.personId,title:`Beginn bei ${a.project}`,sub:a.billable?'Fakturierbar':'Intern',act:'edit-assignment',id:a.id});
     if(a.end&&a.end<=TODAY)ev.push({type:'project',day:a.end,pid:a.personId,title:`Ende bei ${a.project}`,sub:'Projekt beendet',act:'edit-assignment',id:a.id})}
@@ -56,11 +56,11 @@ function historyLink(){const n=doneInWeek(historyEvents(),mondayOf(TDN));
 /* Yearly review on the person page: projects, holidays and trainings in working days, completed items. No sick days. */
 function reviewPanel(id){
   const cur=+TODAY.slice(0,4),y=ui.year[id]||cur,from=`${y}-01-01`,to=`${y}-12-31`,inY=s=>!!s&&s.startsWith(String(y));
-  const clip=a=>workdays(a.start<from?from:a.start,a.end>to?to:a.end);
+  const clip=a=>absDays(a,from,to);
   const projs=S.assignments.filter(a=>a.personId===id&&asgOverlaps(a,from,to)).sort((a,b)=>a.start.localeCompare(b.start));
   const absRow=(kind,label)=>{const list=S.absences.filter(a=>a.personId===id&&a.kind===kind&&a.start<=to&&a.end>=from).sort((a,b)=>a.start.localeCompare(b.start));
     const n=list.reduce((s,a)=>s+clip(a),0);
-    return list.length?`<details class="rv"><summary><span class="rv-l">${label}</span><span class="rv-v">${daysText(n)}</span>${ic('chevR',16)}</summary>${list.map(a=>`<button class="prow" data-action="edit-absence" data-id="${a.id}"><span class="pt">${dm(a.start)} bis ${dm(a.end)}</span><span class="pd">${daysText(clip(a))}</span></button>`).join('')}</details>`
+    return list.length?`<details class="rv"><summary><span class="rv-l">${label}</span><span class="rv-v">${daysText(n)}</span>${ic('chevR',16)}</summary>${list.map(a=>`<button class="prow" data-action="edit-absence" data-id="${a.id}"><span class="pt">${esc(absWhen(a))}</span><span class="pd">${daysText(clip(a))}</span></button>`).join('')}</details>`
       :`<div class="rv"><span class="rv-l">${label}</span><span class="rv-v">keine</span></div>`};
   const todos=S.todos.filter(t=>t.personId===id&&t.done&&inY(t.doneAt)).length,talks=S.talks.filter(t=>t.personId===id&&t.done&&inY(t.doneAt)).length;
   const done=[todos?`${todos} ${todos===1?'Aufgabe':'Aufgaben'}`:'',talks?`${talks} ${talks===1?'Gesprächspunkt':'Gesprächspunkte'}`:''].filter(Boolean).join(', ')||'nichts mit Datum';

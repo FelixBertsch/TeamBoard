@@ -5,6 +5,7 @@
    The list closes when the token is already complete, so Enter then submits as usual. */
 const TAG_HELP=[['ich','Mein To-do zur Person'],['wartet','Wartet auf die Person'],['urlaub','Abwesenheit: Urlaub'],
   ['krank','Abwesenheit: krank, ohne Details'],['schulung','Abwesenheit: Schulung'],['abwesend','Abwesenheit ohne Grund'],
+  ['vormittags','Halber Tag: nur vormittags abwesend'],['nachmittags','Halber Tag: nur nachmittags abwesend'],
   ['wöchentlich','Aufgabe jede Woche'],['zweiwöchentlich','Aufgabe alle 2 Wochen'],['monatlich','Aufgabe jeden Monat'],
   ['quartalsweise','Aufgabe jedes Quartal'],['jährlich','Aufgabe jedes Jahr']];
 let sug=null; // {input, from, to, items, i}

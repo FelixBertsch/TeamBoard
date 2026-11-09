@@ -117,6 +117,14 @@ const initials=p=>p.id==='me'?'Ich':p.name.split(/\s+/).map(w=>w[0]).join('').sl
 const avatar=(p,size='')=>`<span class="av ${size} ${p.id==='me'?'me':''}" aria-hidden="true">${esc(initials(p))}</span>`;
 const hrefOf=id=>id==='me'?'#ich':'#ma-'+id;
 const absentOn=(pid,day)=>S.absences.find(a=>a.personId===pid&&a.start<=day&&a.end>=day);
+/* Half days: an absence of a single day may carry `half: 'am'` (Vormittag) or `'pm'` (Nachmittag). It counts as half a workday,
+   covers half the day column (morning left, afternoon right) and raises no warning: absentFull() and absRisk() skip it. */
+const HALF={am:'vormittags',pm:'nachmittags'},HALF_SHORT={am:'vorm.',pm:'nachm.'};
+const absentFull=(pid,day)=>S.absences.find(a=>a.personId===pid&&!a.half&&a.start<=day&&a.end>=day);
+/* Workdays of an absence, optionally clipped to from..to; a half day counts 0.5. */
+const absDays=(a,from=a.start,to=a.end)=>{const s=from>a.start?from:a.start,e=to<a.end?to:a.end;if(s>e)return 0;const n=workdays(s,e);return a.half?n/2:n};
+/* "23.12. vormittags" or "23.12. bis 31.12." */
+const absWhen=a=>a.half?`${dm(a.start)} ${HALF[a.half]}`:`${dm(a.start)} bis ${dm(a.end)}`;
 const nextAbsence=pid=>S.absences.filter(a=>a.personId===pid&&a.end>=TODAY).sort((a,b)=>a.start.localeCompare(b.start))[0];
 const absPhrase=k=>({Urlaub:'im Urlaub',Krank:'krank',Schulung:'in der Schulung'}[k]||'abwesend');
 /* Absence kind as displayed. The stored value "Sonstiges" reads "Abwesend". */

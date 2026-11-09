@@ -9,7 +9,7 @@
 const RISK_DAYS=3;
 function absRisk(t){
   if(t.side||t.status==='erledigt'||t.end<TODAY)return null;
-  const from=t.start>TODAY?t.start:TODAY,list=S.absences.filter(a=>a.personId===t.personId&&a.start<=t.end&&a.end>=from);
+  const from=t.start>TODAY?t.start:TODAY,list=S.absences.filter(a=>a.personId===t.personId&&!a.half&&a.start<=t.end&&a.end>=from);
   if(!list.length)return null;
   let w=dn(t.end),c=isWorkday(w)?0:-1;while(c<RISK_DAYS&&w>dn(from)){w--;if(isWorkday(w))c++} // first day of the critical phase
   const who=t.personId==='me'?'du bist':`${firstName(personOf(t.personId))} ist`;
@@ -38,7 +38,7 @@ function allIssues(pid){
     if(topicLate(t))out.push({kind:'late',act:'edit-topic',id:t.id,pid:t.personId,text:`${t.title}: Ende ${dm(t.end)} überschritten`});
     const w=topicWarn(t,true);if(w)out.push(w)}
   for(const t of S.todos){if(t.done||t.kind!=='team'||!t.due||t.personId==='me'||t.due<TODAY||(pid&&t.personId!==pid)||!isActive(t.personId))continue;
-    const a=absentOn(t.personId,t.due);if(a)out.push({kind:'warn',act:'edit-todo',id:t.id,pid:t.personId,text:`${t.title}: fällig ${dueLabel(t.due)}, dann ${absPhrase(a.kind)}`,ack:'tabs-'+t.id,sig:t.due,items:[absKey(a)]})}
+    const a=absentFull(t.personId,t.due);if(a)out.push({kind:'warn',act:'edit-todo',id:t.id,pid:t.personId,text:`${t.title}: fällig ${dueLabel(t.due)}, dann ${absPhrase(a.kind)}`,ack:'tabs-'+t.id,sig:t.due,items:[absKey(a)]})}
   for(const t of S.todos){if(t.done||!t.due||t.due<TODAY||(pid&&t.personId!==pid)||!isActive(t.personId))continue;
     const h=holidayOn(dn(t.due));if(h)out.push({kind:'warn',act:'edit-todo',id:t.id,pid:t.personId,text:`${t.title}: fällig ${dueLabel(t.due)}, das ist ein Feiertag (${h})`,ack:'thol-'+t.id,sig:t.due})}
   for(const a of S.assignments){if(!a.end||a.end<TODAY||dn(a.end)>TDN+21||(pid&&a.personId!==pid)||a.personId==='me'||!isActive(a.personId))continue;

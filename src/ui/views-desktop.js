@@ -7,7 +7,7 @@ const quickBlock=()=>`<div class="quick">${ic('plus',18)}<input id="quick" type=
 /* ----- Todo row (lists) ----- */
 function todoRow(t,showPerson){
   const p=personOf(t.personId),late=!t.done&&t.due&&t.due<TODAY,today=!t.done&&t.due===TODAY;
-  const away=!t.done&&t.kind==='team'&&t.due&&t.personId!=='me'&&absentOn(t.personId,t.due);
+  const away=!t.done&&t.kind==='team'&&t.due&&t.personId!=='me'&&absentFull(t.personId,t.due);
   return`<div class="todo${t.done?' done':''}"><button class="check" data-action="toggle" data-id="${t.id}" aria-pressed="${t.done}" aria-label="${t.done?'Wieder öffnen':'Als erledigt markieren'}">${ic('check',14,3)}</button>
     <span class="todo-body"><button class="todo-title" data-action="edit-todo" data-id="${t.id}">${esc(t.title)}</button><span class="todo-meta">${
     away?`<span class="badge away" title="An diesem Tag ${esc(absPhrase(away.kind))}">${esc(absLabel(away.kind))}</span>`:''}${
@@ -26,9 +26,9 @@ function overviewHeadline(){
   if(today)parts.push(today===1?'eine ist heute fällig':`${today} heute fällig`);
   let s=parts.length?cap(parts.join(', '))+'.':'Nichts überfällig, nichts heute fällig.';
   const now=team().map(p=>({p,a:absentOn(p.id,TODAY)})).find(x=>x.a);
-  if(now)s+=` ${firstName(now.p)} ist bis ${longDay(now.a.end)} ${absPhrase(now.a.kind)}.`;
+  if(now)s+=` ${firstName(now.p)} ist ${now.a.half?'heute '+HALF[now.a.half]:'bis '+longDay(now.a.end)} ${absPhrase(now.a.kind)}.`;
   else{const up=S.absences.filter(a=>a.personId!=='me'&&isActive(a.personId)&&a.start>TODAY&&dn(a.start)<=TDN+7).sort((a,b)=>a.start.localeCompare(b.start))[0];
-    if(up)s+=` ${firstName(personOf(up.personId))} ist ab ${longDay(up.start)} ${absPhrase(up.kind)}.`}
+    if(up)s+=` ${firstName(personOf(up.personId))} ist ${up.half?longDay(up.start)+' '+HALF[up.half]:'ab '+longDay(up.start)} ${absPhrase(up.kind)}.`}
   return s;
 }
 const todayOverline=()=>{const d=new Date(TDN*DAYMS),hol=holidayOn(TDN);return`${WDL[d.getUTCDay()]}, ${d.getUTCDate()}. ${MON[d.getUTCMonth()]}, KW ${isoWeek(TDN)}${hol?`, ${hol}`:''}`};
@@ -51,11 +51,14 @@ function filterTags(){const f=ui.filter,b=(v,l)=>`<button class="tag" data-actio
   return`<div class="tags" role="group" aria-label="Filter">${b('alle','Alle')}${b('team','Team')}${b('meine','Meine')}${b('wartet','Wartet auf')}</div>`}
 /* Absences of one person and kind that touch, overlap or are apart only by weekends and holidays form one block. People often
    request leave in pieces (14.12. to 15.12., then 16.12. to 18.12.); the data keeps every entry, the overview shows 14.12. to 18.12.
-   Input sorted by start; blocks come out sorted by start: {personId, kind, start, end, ids}. */
+   Input sorted by start; blocks come out sorted by start: {personId, kind, start, end, hs, he, ids}; hs/he: half day ('am'/'pm')
+   at the first or last day of the block, shown as "23.12. (nachm.) bis 31.12." or for a single half day "23.12. vormittags". */
 function absBlocks(list){const out=[];
   for(const a of list){const b=out.findLast(x=>x.personId===a.personId&&x.kind===a.kind);
-    if(b){let d=dn(b.end)+1;while(d<dn(a.start)&&!isWorkday(d))d++;if(d>=dn(a.start)){if(a.end>b.end)b.end=a.end;b.ids.push(a.id);continue}}
-    out.push({personId:a.personId,kind:a.kind,start:a.start,end:a.end,ids:[a.id]})}
+    if(b){let d=dn(b.end)+1;while(d<dn(a.start)&&!isWorkday(d))d++;if(d>=dn(a.start)){
+      if(a.end>b.end){b.end=a.end;b.he=a.half||''}else if(a.end===b.end&&b.he!==(a.half||''))b.he=''; // morning plus afternoon is a whole day
+      if(a.start===b.start&&b.hs!==(a.half||''))b.hs='';b.ids.push(a.id);continue}}
+    out.push({personId:a.personId,kind:a.kind,start:a.start,end:a.end,hs:a.half||'',he:a.half||'',ids:[a.id]})}
   return out}
 /* "Abwesenheiten" on the overview: the next block of every person (running or upcoming), "Mehr anzeigen" lists all future blocks.
    A click opens the block's first entry. */
@@ -63,12 +66,16 @@ function absencePanel(){
   return`<section class="card card-pad"><div class="panel-head"><h2 class="h4">Abwesenheiten</h2><button class="link-btn" data-action="new-absence">Eintragen</button></div>${absenceRows()}</section>`;
 }
 /* Rows of absencePanel(), also the body of the folding card on the phone. */
+/* Dates of a block: "bis 31.12.", "23.12. (nachm.) bis 31.12.", "heute vormittags", "Mi 23.12. vormittags". */
+function blockWhen(b,now){const sfx=h=>h?` (${HALF_SHORT[h]})`:'';
+  if(b.start===b.end&&b.hs)return`${b.start===TODAY?'heute':WD[wdOf(dn(b.start))]+' '+dm(b.start)} ${HALF[b.hs]}`;
+  return now?`bis ${dm(b.end)}${sfx(b.he)}`:`${dm(b.start)}${sfx(b.hs)} bis ${dm(b.end)}${sfx(b.he)}`}
 function absenceBlocks(){return absBlocks(S.absences.filter(a=>a.end>=TODAY&&isActive(a.personId)).sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end)))}
 function absenceRows(){
   const blocks=absenceBlocks();
   const next=blocks.filter((b,i)=>blocks.findIndex(x=>x.personId===b.personId)===i),more=blocks.length-next.length;
   const row=b=>{const p=personOf(b.personId),now=b.start<=TODAY,n=b.ids.length;
-    return`<button class="prow" data-action="edit-absence" data-id="${b.ids[0]}">${avatar(p,'xs')}<span class="pt">${esc(p.id==='me'?'Ich':firstName(p))}, ${esc(absLabel(b.kind))}${n>1?`<span class="pn">, ${n} Einträge</span>`:''}</span><span class="pd">${now?'<span class="dot"></span>bis '+dm(b.end):dm(b.start)+' bis '+dm(b.end)}</span></button>`};
+    return`<button class="prow" data-action="edit-absence" data-id="${b.ids[0]}">${avatar(p,'xs')}<span class="pt">${esc(p.id==='me'?'Ich':firstName(p))}, ${esc(absLabel(b.kind))}${n>1?`<span class="pn">, ${n} Einträge</span>`:''}</span><span class="pd">${now?'<span class="dot"></span>':''}${esc(blockWhen(b,now))}</span></button>`};
   return`${blocks.length?(ui.absAll?blocks:next).map(row).join(''):'<p class="empty">Niemand ist abwesend, und es ist keine Abwesenheit geplant.</p>'}
     ${more?`<button type="button" class="link-btn abs-more" data-action="abs-more" aria-expanded="${!!ui.absAll}">${ui.absAll?'Weniger anzeigen':`Mehr anzeigen (${more})`}</button>`:''}`;
 }
@@ -120,7 +127,7 @@ function personHeadline(p){
     if(mine.length)s+=mine.length===1?' Dazu kommt ein To-do zu deinem Team.':` Dazu kommen ${mine.length} To-dos zu deinem Team.`;return s}
   const f=firstName(p),own=open.filter(t=>t.personId===p.id&&t.kind==='team'),k=own.length,l=own.filter(t=>t.due&&t.due<TODAY).length;
   let s=!k?`${f} hat keine offenen Aufgaben.`:`${f} hat ${k===1?'eine offene Aufgabe':k+' offene Aufgaben'}${l?(k===1?', und die ist überfällig':`, ${l===1?'eine':l} davon überfällig`):''}.`;
-  const a=nextAbsence(p.id);if(a)s+=a.start<=TODAY?` Bis ${longDay(a.end)} ${absPhrase(a.kind)}.`:` Ab ${longDay(a.start)} ${absPhrase(a.kind)}.`;return s;
+  const a=nextAbsence(p.id);if(a)s+=a.half?` ${a.start<=TODAY?'Heute':'Am '+longDay(a.start)} ${HALF[a.half]} ${absPhrase(a.kind)}.`:a.start<=TODAY?` Bis ${longDay(a.end)} ${absPhrase(a.kind)}.`:` Ab ${longDay(a.start)} ${absPhrase(a.kind)}.`;return s;
 }
 /* Building blocks of the person page, shared by desktop (viewPerson) and phone (viewPersonPhone). */
 function personParts(id){
@@ -146,7 +153,7 @@ function personParts(id){
   const topicsPanel=`<section class="card card-pad"><div class="panel-head"><h2 class="h4">Themen</h2><button class="link-btn" data-action="new-topic" data-person="${id}">Anlegen</button></div>
       ${tops.length?tops.map(topicRow).join(''):`<p class="empty">Noch keine Themen geplant. ${isPhone()?'„Anlegen“ plant das erste.':'Zieh im Zeitplan über die Tage, die es dauern soll.'}</p>`}</section>`;
   const absPanel=`<section class="card card-pad"><div class="panel-head"><h2 class="h4">Abwesenheiten</h2><button class="link-btn" data-action="new-absence" data-person="${id}">Eintragen</button></div>
-      ${absList.length?absList.map(a=>{const n=workdays(a.start,a.end);return`<button class="prow" data-action="edit-absence" data-id="${a.id}"><span class="pt">${esc(absLabel(a.kind))}, ${dm(a.start)} bis ${dm(a.end)}</span><span class="pd">${n===1?'1 Arbeitstag':n+' Arbeitstage'}</span></button>`}).join(''):'<p class="empty">Keine Abwesenheit eingetragen.</p>'}</section>`;
+      ${absList.length?absList.map(a=>`<button class="prow" data-action="edit-absence" data-id="${a.id}"><span class="pt">${esc(absLabel(a.kind))}, ${esc(absWhen(a))}</span><span class="pd">${daysText(absDays(a))}</span></button>`).join(''):'<p class="empty">Keine Abwesenheit eingetragen.</p>'}</section>`;
   return{p,isMe,tasks,talkPanel,topicsPanel,absPanel,asgPanel:assignmentsPanel(id),review:reviewPanel(id),involved:isMe?'':involvedPanel(id)};
 }
 const TOPIC_ST={aktiv:'Aktiv',geplant:'Geplant',erledigt:'Erledigt'};

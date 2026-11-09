@@ -64,17 +64,24 @@ function openTopic(id,preset={}){
 }
 function openAbsence(id,preset={}){
   const ex=id?S.absences.find(x=>x.id===id):null;
-  const a=ex||{personId:preset.personId||'me',kind:preset.kind||'Urlaub',start:preset.start||TODAY,end:preset.end||preset.start||TODAY,note:preset.note||''};
+  const a=ex||{personId:preset.personId||'me',kind:preset.kind||'Urlaub',start:preset.start||TODAY,end:preset.end||preset.start||TODAY,note:preset.note||'',half:preset.half||null};
   openDrawer({title:ex?'Abwesenheit bearbeiten':'Abwesenheit eintragen',submitLabel:ex?'Speichern':'Eintragen',top:preset.top,
     body:field('Person',`<select name="personId">${personOptions(a.personId)}</select>`)+group('Art',radios('kind',[['Urlaub','Urlaub'],['Krank','Krank'],['Schulung','Schulung'],['Sonstiges','Abwesend']],a.kind))
       +`<div class="two">${field('Von',dateIn('start',a.start,{to:'end'}))}${field('Bis',dateIn('end',a.end,{from:'start'}))}</div>`
+      +halfGroup(a.half,a.start===a.end,'dates')
       +`<div class="abs-note">${field('Notiz',`<input name="note" value="${esc(a.note)}" autocomplete="off" placeholder="z. B. Vertretung durch Lena">`)}</div>`
       +`<p class="d-note abs-sick">Bei Krankheit speichert das Teamboard keine Details. ${CFG.sickVisibleDays} Tage nach dem Ende steht dort nur noch „Abwesend“.</p>`,
     onSubmit:v=>{let{personId,kind,start,end}=v;if(!start||!end)return'Bitte setze Von und Bis.';if(end<start)[start,end]=[end,start];
-      const note=kind==='Krank'?'':(v.note||'').trim(),data={personId,kind,start,end,...(note?{note}:{})};
-      if(ex){Object.assign(ex,data);if(!note)delete ex.note}else S.absences.push(newEntry(data));save();toast(ex?'Abwesenheit gespeichert':'Abwesenheit eingetragen',true)},
+      const half=start===end&&HALF[v.half]?v.half:null; // hidden for several days, so ignored there
+      const note=kind==='Krank'?'':(v.note||'').trim(),data={personId,kind,start,end,...(half?{half}:{}),...(note?{note}:{})};
+      if(ex){Object.assign(ex,data);if(!note)delete ex.note;if(!half)delete ex.half}else S.absences.push(newEntry(data));save();toast(ex?'Abwesenheit gespeichert':'Abwesenheit eingetragen',true)},
     onDelete:ex?()=>{S.absences=S.absences.filter(x=>x.id!==id);save();toast('Abwesenheit gelöscht',true)}:null});
 }
+/* "Tageszeit" of an absence: whole day, morning or afternoon. Shown only while start and end are the same day: the desktop form
+   (sync 'dates') follows its start/end fields via syncHalf() in events.js, the phone sheet via capPreview(). */
+const halfGroup=(half,oneDay,sync='')=>`<div class="half-g"${sync?` data-sync="${sync}"`:''}${oneDay?'':' hidden'}>${group('Tageszeit',radios('half',[['','Ganzer Tag'],['am','Vormittag'],['pm','Nachmittag']],half||''))}</div>`;
+function syncHalf(f){const g=f?.querySelector('.half-g[data-sync=dates]');if(!g)return;
+  const s=parseDeDate(f.elements.start?.value),e=parseDeDate(f.elements.end?.value);g.hidden=!(s&&(!e||s===e))}
 /* Project assignment: person on a project from start to end (empty = open), billable or internal. */
 function openAssignment(id,preset={}){
   const ex=id?S.assignments.find(x=>x.id===id):null;

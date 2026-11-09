@@ -5,7 +5,7 @@ function awayChips(){
   if(!list.length)return'';
   const wd=s=>`${WD[wdOf(dn(s))]} ${dm(s)}`;
   return`<div class="m-row" role="group" aria-label="Abwesend">${list.map(a=>{const p=personOf(a.personId),now=a.start<=TODAY,n=p.id==='me'?'Ich':firstName(p);
-    return`<button class="away${now?'':' soon'}" data-action="edit-absence" data-id="${a.id}">${avatar(p,'sm')}${esc(n)}, ${esc(absLabel(a.kind))} ${now?'bis '+wd(a.end):'ab '+wd(a.start)}</button>`}).join('')}</div>`;
+    return`<button class="away${now?'':' soon'}" data-action="edit-absence" data-id="${a.id}">${avatar(p,'sm')}${esc(n)}, ${esc(absLabel(a.kind))} ${a.half?(now?'heute':wd(a.start))+' '+HALF[a.half]:now?'bis '+wd(a.end):'ab '+wd(a.start)}</button>`}).join('')}</div>`;
 }
 /* "Heute": todos due today or overdue, the rest of the list and the other panels fold. Each card shows a summary in its head,
    its open state is a device preference (ui.fold, saved by saveUi()). "Zu klären" opens by itself when a red issue appears
@@ -63,7 +63,7 @@ function gridRows(mon,n,sel,people){
     const own=placeLanes(S.topics.filter(t=>t.personId===p.id&&dn(t.end)>=mon&&dn(t.start)<=last&&colStart(dn(t.start),mon)<=colEnd(dn(t.end),mon)).sort(byStart));
     const inv=placeLanes(involvedTopics(p.id,mon,last).filter(t=>colStart(dn(t.start),mon)<=colEnd(dn(t.end),mon)));
     const abs=S.absences.filter(a=>a.personId===p.id&&dn(a.end)>=mon&&dn(a.start)<=last).map(a=>{const s=Math.max(colStart(dn(a.start),mon),0),e=Math.min(colEnd(dn(a.end),mon),n-1);
-      return s>e?'':`<span class="wg-a" style="left:${gx(s)};width:${gx(e-s+1)}"><span>${esc(absLabel(a.kind))}</span></span>`}).join('');
+      return s>e?'':`<span class="wg-a${a.half?' half':''}" style="left:${gx(s+(a.half==='pm'?0.5:0))};width:${gx(a.half?0.5:e-s+1)}"${a.half?` title="${esc(absLabel(a.kind))} ${HALF[a.half]}"`:''}><span>${esc(absLabel(a.kind))}</span></span>`}).join('');
     let bars=own.placed.map(({t,l})=>gridBar(t,mon,n,6+l*30,`${t.status} tone-${tones[t.id]}`,`<span>${esc(t.title)}</span>`,`${t.title}, ${dm(t.start)} bis ${dm(t.end)}. Gedrückt halten zum Verschieben.`)).join('');
     bars+=inv.placed.map(({t,l})=>gridBar(t,mon,n,6+own.n*30+l*26,`inv${t.status==='erledigt'?' inv-done':''}`,`${ic('users',12)}<span>${esc(ownerName(t))}: ${esc(t.title)}</span>`,`Beteiligt an ${t.title}, verantwortlich: ${ownerName(t)}`)).join('');
     const h=Math.max(44,12+own.n*30+inv.n*26+(abs?16:0)),name=p.id==='me'?'Meine Planung':p.name;
@@ -95,9 +95,9 @@ function dayList(d,people){
     const due=open.filter(t=>mine(t,p)&&t.due===day).length,late=d===TDN?open.filter(t=>mine(t,p)&&t.due&&t.due<TODAY).length:0;
     const chip=t=>`<button type="button" class="dt ${t.status} tone-${tones[t.id]}" data-action="edit-topic" data-id="${t.id}"><span class="dt-t">${esc(t.title)}</span><small>${t.status==='geplant'?'geplant, ':t.status==='erledigt'?'erledigt, ':''}bis ${esc(WD[wdOf(dn(t.end))]+' '+dm(t.end))}</small></button>`;
     const ichip=t=>`<button type="button" class="dt inv" data-action="edit-topic" data-id="${t.id}">${ic('users',14)}<span class="dt-t">mit ${esc(ownerName(t))}: ${esc(t.title)}</span></button>`;
-    const meta=(a?`<span class="badge away">${esc(absLabel(a.kind))} bis ${esc(WD[wdOf(dn(a.end))]+' '+dm(a.end))}</span>`:'')
+    const meta=(a?`<span class="badge away">${esc(absLabel(a.kind))} ${a.half?HALF[a.half]:'bis '+esc(WD[wdOf(dn(a.end))]+' '+dm(a.end))}</span>`:'')
       +(due?`<span class="dd-due">${due===1?'eine Aufgabe fällig':due+' Aufgaben fällig'}</span>`:'')+(late?`<span class="badge late">${ic('alert',12,2.5)}${late} überfällig</span>`:'');
-    return{a,html:`<div class="dd${a?' off':''}"><a class="dd-who" href="${hrefOf(p.id)}">${avatar(p,'sm')}<span class="dd-nm"><b>${esc(p.id==='me'?'Ich':p.name)}</b><small>${esc(proj)}</small></span>${ic('chevR',18)}</a>
+    return{a,html:`<div class="dd${a&&!a.half?' off':''}"><a class="dd-who" href="${hrefOf(p.id)}">${avatar(p,'sm')}<span class="dd-nm"><b>${esc(p.id==='me'?'Ich':p.name)}</b><small>${esc(proj)}</small></span>${ic('chevR',18)}</a>
       ${meta?`<div class="dd-meta">${meta}</div>`:''}<div class="dd-items">${own.map(chip).join('')}${inv.map(ichip).join('')}${own.length+inv.length?'':'<span class="dd-free">Kein Thema geplant</span>'}</div></div>`}};
   const rows=people.map(row),hol=holidayOn(d);
   return`<section class="card card-pad dday" aria-live="polite"><div class="panel-head"><h2 class="h4">${d===TDN?'Heute, ':''}${esc(WDL[wdOf(d)])}, ${esc(dmN(d))}</h2></div>

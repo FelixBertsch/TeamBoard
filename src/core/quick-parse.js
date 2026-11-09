@@ -68,8 +68,8 @@ function parseMentions(t,personId){
 function parseQuick(raw,c){
   let t=' '+raw+' ',personId=c.personId,kind=c.kind,due=null,absKind=null,mixed=false,repeat='';
   const pm=parseMentions(t,personId),unknown=pm.unknown,ambiguous=pm.ambiguous;t=pm.t;personId=pm.personId;
-  let m;const tag=/\s#(ich|meins|wartet|urlaub|krank|schulung|abwesend)(?=\s)/i;
-  while((m=t.match(tag))){const w=m[1].toLowerCase();if(ABS_TAGS[w])absKind=ABS_TAGS[w];else{kind=TODO_TAGS[w];mixed=true}t=t.replace(m[0],' ')}
+  let m,half=null;const tag=/\s#(ich|meins|wartet|urlaub|krank|schulung|abwesend|vormittags|nachmittags)(?=\s)/i;
+  while((m=t.match(tag))){const w=m[1].toLowerCase();if(ABS_TAGS[w])absKind=ABS_TAGS[w];else if(w==='vormittags'||w==='nachmittags')half=w[0]==='v'?'am':'pm';else{kind=TODO_TAGS[w];mixed=true}t=t.replace(m[0],' ')}
   t=t.replace(/\s#([^\s@#]+)(?=\s)/g,(all,w)=>{const r=REPEAT_TAGS[fold(w)];if(!r)return all;repeat=r;return' '});
   let bis=null;const b=takeDate(t,'bis');if(b){bis=b.date;t=b.t}
   if(absKind){
@@ -78,23 +78,27 @@ function parseQuick(raw,c){
     start=start||TODAY;let end=bis||start;if(end<start)[start,end]=[end,start];
     let note=t.replace(/\s+/g,' ').trim(),dropped=false;
     if(absKind==='Krank'&&note){dropped=true;note=''} // no further details on sick days
-    return{type:'absence',personId,absKind,start,end,note,dropped,mixed,unknown,ambiguous,title:''};
+    return{type:'absence',personId,absKind,start,end,note,dropped,mixed,unknown,ambiguous,title:'',half,...(half&&start!==end?{err:HALF_ONE_DAY}:{})};
   }
   due=bis;
   if(!due){const x=takeDate(t,'am|zum')||takeLoneDay(t);if(x){due=x.date;t=x.t}} // without a date a repeating todo starts today (newTodo)
   if(personId==='me')kind='team';
-  return{type:'todo',title:t.replace(/\s+/g,' ').trim(),personId,kind,due,with:pm.with,repeat,unknown,ambiguous};
+  return{type:'todo',title:t.replace(/\s+/g,' ').trim(),personId,kind,due,with:pm.with,repeat,unknown,ambiguous,...(half?{err:HALF_NO_ABS}:{})};
 }
+/* #vormittags/#nachmittags: only with an absence tag and for a single day; otherwise `err` and nothing is created. */
+const HALF_ONE_DAY='Halbe Tage gibt es nur für einen einzelnen Tag.';
+const HALF_NO_ABS='#vormittags und #nachmittags gehen nur zusammen mit #urlaub, #krank, #schulung oder #abwesend.';
 const unknownText=n=>`„${n}“ gibt es weder im Team noch bei den Kontakten. Die Vorschlagsliste legt einen Kontakt an.`;
 /* Preview line of a todo: kind, due date, repetition, involved people. Shared by quick capture and the phone sheet. */
 function todoPreview(r,due){const p=personOf(r.personId),w=withNames(r);
   return`<span><b>${esc(kindLabel(r.kind,p))}</b>${due?`, fällig ${esc(longDay(due))}`:', ohne Frist'}${r.repeat?`, ${esc(repeatLabel(r.repeat).toLowerCase())}`:''}${w?`, mit ${esc(w)}`:''}</span>`}
 const ambiguousText=r=>`Mehrere passen: ${r.ambiguous.map(p=>p.name).join(', ')}. Wähl eine Person aus der Liste.`;
 const rangeText=(s,e)=>s===e?dueLabel(s):`${dueLabel(s)} bis ${dueLabel(e)}`;
-const daysText=n=>n===1?'1 Arbeitstag':`${n} Arbeitstage`;
+const daysText=n=>n===0.5?'ein halber Arbeitstag':n===1?'1 Arbeitstag':`${String(n).replace('.',',')} Arbeitstage`;
 function absPreview(r){
-  const p=personOf(r.personId),who=p.id==='me'?'Ich':p.name,over=S.absences.find(a=>a.personId===r.personId&&a.start<=r.end&&a.end>=r.start);
-  let s=`<span><b>Abwesenheit: ${esc(who)} ${esc(absPhrase(r.absKind))}</b>, ${esc(rangeText(r.start,r.end))}${(n=>n?`, ${daysText(n)}`:'')(workdays(r.start,r.end))}</span>`;
+  const p=personOf(r.personId),who=p.id==='me'?'Ich':p.name,half=r.start===r.end?r.half:null;
+  const over=S.absences.find(a=>a.personId===r.personId&&a.start<=r.end&&a.end>=r.start&&!(half&&a.half&&a.half!==half)); // morning and afternoon do not overlap
+  let s=`<span><b>Abwesenheit: ${esc(who)} ${esc(absPhrase(r.absKind))}</b>, ${esc(rangeText(r.start,r.end))}${half?' '+HALF[half]:''}${(n=>n?`, ${daysText(n)}`:'')(absDays({start:r.start,end:r.end,half}))}</span>`;
   if(r.dropped)s+='<span class="warn">Bei Krankheit wird kein Text gespeichert.</span>';
   if(over)s+=`<span class="warn">Überschneidet ${esc(absLabel(over.kind))} ${dm(over.start)} bis ${dm(over.end)}</span>`;
   if(r.mixed)s+='<span>#ich und #wartet gelten nur für Aufgaben.</span>';
@@ -104,6 +108,7 @@ function previewHTML(raw){
   if(!raw.trim())return`<span>@Name weist zu, weitere @Namen sind beteiligt, „am 12.11.“ oder „bis Fr“ setzt die Frist, #ich macht daraus dein To-do, #wartet ein Nachfassen, #monatlich eine Wiederholung, #urlaub eine Abwesenheit.</span>`;
   const r=parseQuick(raw,ctx());
   if(r.ambiguous)return`<span class="warn">${esc(ambiguousText(r))}</span>`;
+  if(r.err)return`<span class="warn">${esc(r.err)}</span>`;
   let s;
   if(r.type==='absence')s=absPreview(r);
   else s=todoPreview(r,r.due||(r.repeat?TODAY:null));
@@ -113,11 +118,11 @@ function previewHTML(raw){
 }
 /* Creates the absence parsed from quick capture. Returns the toast text. */
 function addAbsence(r){
-  S.absences.push(newEntry({personId:r.personId,kind:r.absKind,start:r.start,end:r.end,...(r.note?{note:r.note}:{})}));save();
+  S.absences.push(newEntry({personId:r.personId,kind:r.absKind,start:r.start,end:r.end,...(r.half&&r.start===r.end?{half:r.half}:{}),...(r.note?{note:r.note}:{})}));save();
   const p=personOf(r.personId);return`${{Urlaub:'Urlaub',Krank:'Krankheit',Schulung:'Schulung'}[r.absKind]||'Abwesenheit'} für ${p.id==='me'?'dich':firstName(p)} eingetragen`;
 }
 function quickAdd(){const inp=$('#quick');if(!inp)return;closeSuggest();const r=parseQuick(inp.value,ctx());
-  if(r.ambiguous){$('#qprev').innerHTML=previewHTML(inp.value);return}
+  if(r.ambiguous||r.err){$('#qprev').innerHTML=previewHTML(inp.value);return}
   if(r.type==='absence'){const msg=addAbsence(r);inp.value='';refocusQuick=true;render();toast(msg,true);return}
   if(!r.title)return;
   newTodo(r);
