@@ -6,8 +6,13 @@
    - CFG.saveDelayMs after the last change, push() commits the encrypted state. `base` is the state last agreed
      with GitHub, `sha` its version. A stale sha means another device committed: pull(), merge per entry, retry.
    - sync() runs every CFG.syncIntervalSeconds, on focus and when the network returns. It pulls remote changes
-     and pushes pending local ones. It waits while a form, drag or dialog is open (busy()).
+     and pushes pending local ones. It waits while a form, drag or dialog is open (busy()), except for forms that save
+     every change at once (drawer cfg `live`): a change made there must not wait on the device until the form closes.
+   - The cache is shared by every window of the browser. A window that writes it while another window's changes are
+     still only in the cache (not on GitHub) takes those changes over first (cache()), so reloading one window never
+     drops what the other has not committed yet.
    - After each successful sync, Backup.write() mirrors a plain copy into the optional backup folder. */
+const TAB = Math.random().toString(36).slice(2); // this window, to tell its cache writes from those of other windows
 const Store = {
   mode: 'none',
   status: 'idle', // idle | loading | pending | saving | saved | offline | error | outdated
@@ -31,7 +36,7 @@ const Store = {
   },
   schedule(ms = CFG.saveDelayMs) { clearTimeout(this.timer); this.timer = setTimeout(() => this.push(), ms); },
   get dirty() { return this.mode === 'github' && snapshot() !== this.base; },
-  busy() { return sug || drag || document.body.classList.contains('drawer-open') || $('.tl-new') || $('#dlg.open') || $('#tour'); },
+  busy() { return sug || drag || (document.body.classList.contains('drawer-open') && !drawerCfg?.live) || $('.tl-new') || $('#dlg.open') || $('#tour'); },
 
   setStatus(st, err = '') {
     this.status = st; this.error = err;
@@ -119,8 +124,18 @@ const Store = {
   remember(sha) { if (sha && !this.known.includes(sha)) { this.known.push(sha); if (this.known.length > 50) this.known.shift(); } },
   cache() {
     if (this.mode !== 'github') return;
-    idbSet('cache', { repo: this.gh.repo, path: this.gh.path, state: S, base: this.base, sha: this.sha, known: this.known })
-      .catch(e => console.warn('Cache write failed', e));
+    idbUpdate('cache', prev => {
+      if (prev && prev.tab && prev.tab !== TAB && prev.repo === this.gh.repo && prev.path === this.gh.path && prev.base && JSON.stringify(prev.state) !== prev.base) {
+        // another window cached changes it has not committed yet: take them over instead of overwriting them
+        if (this.busy()) { this.schedule(3000); return prev; } // a form holds entries of S; push() writes the cache again later
+        try {
+          const before = snapshot();
+          S = mergeStates(JSON.parse(prev.base), S, normalize(prev.state)).data;
+          if (snapshot() !== before) { resetUndo(); render(); this.setStatus('pending'); this.schedule(); }
+        } catch (e) { console.warn('Cache merge failed', e); return prev; }
+      }
+      return { repo: this.gh.repo, path: this.gh.path, state: S, base: this.base, sha: this.sha, known: this.known, tab: TAB };
+    }).catch(e => console.warn('Cache write failed', e));
   },
 
   async sync(force = false) {

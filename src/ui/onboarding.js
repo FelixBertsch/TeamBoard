@@ -34,7 +34,7 @@ const ownDayText=o=>o.date.length===5?`${+o.date.slice(3)}.${+o.date.slice(0,2)}
 function openRegion(){
   const cur=getSetting('region',null),own=ownDays(),presets=OWN_PRESETS.filter(([d])=>!ownDayAt(d)),sc=drawerCfg?.holidays?$('#drawer .d-body').scrollTop:0;
   const next=[];for(let n=TDN;next.length<5&&n<TDN+400;n++)if(holidayOn(n))next.push(n);
-  openDrawer({title:'Feiertage',holidays:true,refresh:openRegion,
+  openDrawer({title:'Feiertage',holidays:true,live:true,refresh:openRegion,
     body:field('Bundesland',`<select name="region">${cur===null?'<option value="?" disabled selected>Bitte wählen</option>':''}${REGIONS.map(([v,l])=>`<option value="${v}"${v===cur?' selected':''}>${esc(l)}</option>`).join('')}</select>`)
       +'<p class="d-note">Feiertage erscheinen in der Zeitleiste wie Wochenenden, zählen nicht als Arbeitstage und landen unter „Zu klären“, wenn eine Aufgabe darauf fällt. Alles hier gilt sofort und auf allen deinen Geräten.</p>'
       +'<h4 class="d-sub">Eigene freie Tage</h4><p class="d-note">Tage, die deine Firma zusätzlich freigibt. Sie zählen wie Feiertage.</p>'

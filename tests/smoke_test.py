@@ -396,6 +396,18 @@ def sync_flows(b):
     a.keyboard.press("Escape"); a.wait_for_timeout(800)
     check(a.locator("#tour").count() == 0 and a.evaluate("TB.store.mode") == "github" and a.evaluate("TB.state().todos.some(t=>t.title==='Offline task')")
           and not a.evaluate("TB.state().todos.some(t=>t.title==='Im Rundgang')") and gh.commits == n, "tour ends on the own data without commits")
+    # a form that saves at once (contacts) does not hold back the commit; a second window never drops what the first has not committed
+    a.evaluate("openContacts()"); a.fill("#dform [name=name]", "Kontakt im Formular"); a.click("#dform button[type=submit]"); wait_synced(a)
+    p.evaluate("TB.store.sync(true)"); p.wait_for_timeout(500)
+    check(a.locator("body.drawer-open").count() == 1 and p.evaluate("TB.state().contacts.some(k=>k.name==='Kontakt im Formular')"), "a contact is committed while the contacts form stays open")
+    a.keyboard.press("Escape"); a.wait_for_timeout(100)
+    a2 = a_ctx.new_page(); a2.errs = []; a2.on("pageerror", lambda e: a2.errs.append(str(e))); a2.goto(BASE + "?nosw=1"); a2.wait_for_timeout(1000)
+    gh.down = True; add_todo(a, "Fenster A"); a.wait_for_timeout(300); add_todo(a2, "Fenster B"); a2.wait_for_timeout(300)
+    a.reload(); a.wait_for_timeout(800); gh.down = False
+    both = "['Fenster A','Fenster B'].every(x=>TB.state().todos.some(t=>t.title===x))"
+    a_has = a.evaluate(both); a.evaluate("TB.store.sync(true)"); wait_synced(a); p.evaluate("TB.store.sync(true)"); p.wait_for_timeout(500)
+    check(a_has and p.evaluate(both) and not a2.errs, "two windows: reloading one keeps what the other has not committed yet")
+    a2.close()
     # a list this version does not know survives a merge; data from a newer version stops this window from writing
     seal = "async v=>{const s=TB.store;const env=await Vault.seal(JSON.stringify({...TB.state(),version:v,future:[{id:'f1',x:1}]}),s.gh.key,s.gh.salt);const r=await GitHub.put(s.gh,env,s.sha,'test');s.sha=r.sha}"
     p.evaluate("TB.store.sync(true)"); p.wait_for_timeout(500)

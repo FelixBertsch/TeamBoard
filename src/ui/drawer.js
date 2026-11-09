@@ -1,6 +1,8 @@
 /* Drawer with forms: side panel on desktop, bottom sheet on phone (CSS: .lay-phone .drawer). Same markup.
    cfg: title, body, submitLabel (missing: close button only), onSubmit, onDelete, deleteLabel, top (above the form inside the scrolling body),
-   head (below the title, outside the scrolling body: the type picker of the capture sheet), capture (capture sheet type, see capture.js). */
+   head (below the title, outside the scrolling body: the type picker of the capture sheet), capture (capture sheet type, see capture.js),
+   live (every change in the form is saved at once and the form holds no entry it edits later: sync and commits do not wait for it,
+   see Store.busy(); contacts list, "Mehr", "Feiertage"), refresh (rebuilds the form after undo). */
 let drawerCfg=null,lastFocus=null;
 const KEEP_OPEN={}; // onSubmit returns this when it opened another form itself
 const field=(label,control)=>`<label class="field"><span class="fl">${label}</span>${control}</label>`;
@@ -160,7 +162,7 @@ function archivePerson(p){p.archived=TODAY;
 function openContacts(){
   const list=S.contacts.filter(k=>!k.archived).sort((a,b)=>a.name.localeCompare(b.name,'de'));
   const open=id=>S.todos.filter(t=>!t.done&&withOf(t).includes(id)).length;
-  openDrawer({title:'Kontakte',submitLabel:'Hinzufügen',
+  openDrawer({title:'Kontakte',submitLabel:'Hinzufügen',live:true,
     body:'<p class="d-note" style="margin-top:0">Personen außerhalb deines Teams, zum Beispiel deine Führungskraft. Du erwähnst sie mit @ in Aufgaben und Themen und filterst in „Meine Planung“ danach.</p>'
       +`<div class="more-list">${list.map(k=>{const n=open(k.id);return`<button type="button" class="prow" data-action="edit-contact" data-id="${k.id}">${avatar(k,'xs')}<span class="pt">${esc(k.name)}</span><span class="pd">${n?(n===1?'1 offen':n+' offen'):''}</span></button>`}).join('')
         ||'<p class="empty">Noch keine Kontakte. Gib unten einen Namen ein oder tippe @Name in einer Aufgabe.</p>'}</div>`
@@ -183,6 +185,6 @@ function openMore(){
   const row=(act,icon,label)=>`<button type="button" class="prow" data-action="${act}">${ic(icon,18)}<span class="pt">${label}</span></button>`;
   const rows=`<button type="button" class="prow" data-action="go" data-v="verlauf">${ic('history',18)}<span class="pt">Verlauf</span></button>`
     +row('new-person','userPlus','Person hinzufügen')+row('contacts','contact','Kontakte')+storageActions().map(a=>row(...a)).join('');
-  openDrawer({title:'Mehr',body:`<div class="more-sync">${syncHTML(true).replace(' id="syncState"','')}</div><div class="more-list">${rows}</div>
+  openDrawer({title:'Mehr',live:true,body:`<div class="more-sync">${syncHTML(true).replace(' id="syncState"','')}</div><div class="more-list">${rows}</div>
     ${isPhone()?'':`<div class="more-keys">${keysHTML()}</div>`}`});
 }
