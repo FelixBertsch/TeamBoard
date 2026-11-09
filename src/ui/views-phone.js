@@ -101,7 +101,7 @@ function dayList(d,people){
       ${meta?`<div class="dd-meta">${meta}</div>`:''}<div class="dd-items">${own.map(chip).join('')}${inv.map(ichip).join('')}${own.length+inv.length?'':'<span class="dd-free">Kein Thema geplant</span>'}</div></div>`}};
   const rows=people.map(row),hol=holidayOn(d);
   return`<section class="card card-pad dday" aria-live="polite"><div class="panel-head"><h2 class="h4">${d===TDN?'Heute, ':''}${esc(WDL[wdOf(d)])}, ${esc(dmN(d))}</h2></div>
-    ${hol?`<p class="dd-hol">${esc(hol)}, Feiertag</p>`:''}${rows.filter(r=>!r.a).map(r=>r.html).join('')}${rows.filter(r=>r.a).map(r=>r.html).join('')}</section>`;
+    ${hol?`<p class="dd-hol">${esc(holLabel(d))}</p>`:''}${rows.filter(r=>!r.a).map(r=>r.html).join('')}${rows.filter(r=>r.a).map(r=>r.html).join('')}</section>`;
 }
 function teamLand(banner,people){
   const mon=mondayOf(TDN)-7*TEAM_BACK,W=TEAM_BACK+1+TEAM_AHEAD,n=W*5;

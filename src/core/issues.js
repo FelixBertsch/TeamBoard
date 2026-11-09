@@ -40,7 +40,7 @@ function allIssues(pid){
   for(const t of S.todos){if(t.done||t.kind!=='team'||!t.due||t.personId==='me'||t.due<TODAY||(pid&&t.personId!==pid)||!isActive(t.personId))continue;
     const a=absentFull(t.personId,t.due);if(a)out.push({kind:'warn',act:'edit-todo',id:t.id,pid:t.personId,text:`${t.title}: fällig ${dueLabel(t.due)}, dann ${absPhrase(a.kind)}`,ack:'tabs-'+t.id,sig:t.due,items:[absKey(a)]})}
   for(const t of S.todos){if(t.done||!t.due||t.due<TODAY||(pid&&t.personId!==pid)||!isActive(t.personId))continue;
-    const h=holidayOn(dn(t.due));if(h)out.push({kind:'warn',act:'edit-todo',id:t.id,pid:t.personId,text:`${t.title}: fällig ${dueLabel(t.due)}, das ist ein Feiertag (${h})`,ack:'thol-'+t.id,sig:t.due})}
+    const h=holidayOn(dn(t.due));if(h)out.push({kind:'warn',act:'edit-todo',id:t.id,pid:t.personId,text:`${t.title}: fällig ${dueLabel(t.due)}, das ist ${isOwnDay(dn(t.due))?'ein freier Tag':'ein Feiertag'} (${h})`,ack:'thol-'+t.id,sig:t.due})}
   for(const a of S.assignments){if(!a.end||a.end<TODAY||dn(a.end)>TDN+21||(pid&&a.personId!==pid)||a.personId==='me'||!isActive(a.personId))continue;
     const next=ds(dn(a.end)+1);if(S.assignments.some(b=>b!==a&&b.personId===a.personId&&asgActive(b,next)))continue;
     out.push({kind:'warn',act:'edit-assignment',id:a.id,pid:a.personId,text:`${a.project}: Einsatz von ${firstName(personOf(a.personId))} endet ${a.end===TODAY?'heute':'am '+dm(a.end)}, danach ist nichts geplant`,ack:'asg-'+a.id,sig:a.end})}

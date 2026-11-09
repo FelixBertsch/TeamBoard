@@ -38,7 +38,7 @@ It runs as a static web app (GitHub Pages) on three kinds of devices: a large mo
 | `styles/layout.css` | Laptop icon bar, phone, wide monitors, bottom sheet | "Layout and devices" |
 | `src/config.js` | `CFG`: developer settings. User settings live in the data (`S.settings`) | |
 | `src/core/model.js` | State `S`, `ui`, undo, demo data, `normalize()` with migrations, settings, routing, people helpers, recurring todos | `docs/data-model.md` |
-| `src/core/util.js`, `holidays.js` | Dates, formatting, `esc`, `$`; public holidays per state | `docs/dates.md` |
+| `src/core/util.js`, `holidays.js` | Dates, formatting, `esc`, `$`; public holidays per state and own days off | `docs/dates.md` |
 | `src/core/quick-parse.js` | `parseQuick()`, `parseMentions()` | `docs/quick-capture.md` |
 | `src/core/issues.js` | "Zu klären" | |
 | `src/ui/` | Rendering and interaction, one file per area | `docs/ui.md` |
@@ -161,6 +161,7 @@ Each with its date and reason, so they are not reopened without a new argument.
 - **Recurring todos with one open instance** (8.11.2026): no future copies on the timeline, the rhythm never drifts, late completion creates no backlog.
 - **Data repository per device, not in the code** (8.11.2026): anyone can use the published app with their own private repository, without a fork.
 - **Holidays per state as a synced setting** (8.11.2026): computed, no data source; every device shows the same days off.
+- **Own days off in the data, not in `CFG`** (9.11.2026): companies give days like Heiligabend off without a law behind them. They are a synced setting (`ownDays`) edited under "Mehr" → "Feiertage" and count like holidays; only labels say "frei". `CFG.extraHolidays` was removed, because the config lives in the public repository. The form applies changes at once with undo, so closing it never drops an added day.
 - **Tour on sample data** (8.11.2026): a tour across an empty board explains nothing. No tour library.
 - **Absence warnings only where the finish of a main topic is at risk** (9.11.2026): long topics that run on the side collected one warning per day off. Topics are main or side topics (`side`); side topics get no absence warnings, main topics only for an absence on the end date or the three workdays before it, or absences over more than half of the remaining workdays. One entry per topic.
 - **Half days as part of an absence of one day** (9.11.2026): `half: am|pm`, entered with „Tageszeit“ in the form or `#vormittags`/`#nachmittags` next to an absence tag. A leave that starts or ends with half a day is two entries; the overview merges them into one block. Half days raise no warnings.

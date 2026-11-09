@@ -20,7 +20,7 @@ Decrypted content, also the format of backups and exports:
   "talks":    [{ "id": "…", "personId": "lena", "text": "Probezeit-Feedback", "done": true, "doneAt": "2026-11-06" }],
   "assignments": [{ "id": "…", "personId": "lena", "project": "Kranich Versicherung", "start": "2026-03-01", "end": null,
                     "billable": true, "note": "" }],
-  "settings": [{ "id": "region", "value": "HE" }, { "id": "phone", "value": "2026-11-08" }],
+  "settings": [{ "id": "region", "value": "HE" }, { "id": "ownDays", "value": [{ "date": "12-24", "name": "Heiligabend" }] }, { "id": "phone", "value": "2026-11-08" }],
   "acks":     [{ "id": "abs-a1b2c3d", "sig": "2026-11-13", "items": ["…:2026-11-12:2026-11-13"], "at": "2026-11-09" }]
 }
 ```
@@ -43,7 +43,7 @@ Meanings you cannot derive from the names:
 - **Sick days are not kept as history.** `expireSick()` turns a `Krank` absence into `Sonstiges` and drops its note `CFG.sickVisibleDays` (7) days after its end. It runs after every load (`Store.resume`, `connect`, `sync`, import, demo) via `applyExpiry()`, without an undo step. The history view and the yearly review never list or count `Krank` or `Sonstiges`. Do not add a sick-day count or list anywhere; the user decided this for legal reasons.
 - `doneAt` (`YYYY-MM-DD`) on todos and talks: set when completed, removed when reopened; on topics when the status becomes `erledigt`. Every form shows it for correction („Erledigt am“, „Besprochen am“; for topics only while the status is „Erledigt“). Older entries have none and show under "Ohne Datum" (topics fall back to `end`).
 - `assignments`: a person on a project (free text, usually the customer) from `start` to `end` (`null` = open). Several at once are allowed. `billable` per assignment; a new one takes the value of the last assignment with the same project name. Helpers in `model.js`: `asgActive()`, `currentAssignments()`, `projectLabel()` ("Kranich Versicherung +1"), `teamLine()` ("Plattform · Kranich Versicherung").
-- `settings`: user settings that travel with the data, `{id, value}`, merged per id like every list. Read with `getSetting(id, default)`/`hasSetting(id)`, write with `setSetting(id, value)` and `save()`. Ids: `region` (state code for holidays, `''` = nationwide only; missing = not chosen yet), `phone` (date a phone first connected, set by `notePhone()`), `onboarded` (date "Erste Schritte" was hidden).
+- `settings`: user settings that travel with the data, `{id, value}`, merged per id like every list. Read with `getSetting(id, default)`/`hasSetting(id)`, write with `setSetting(id, value)` and `save()`. Ids: `region` (state code for holidays, `''` = nationwide only; missing = not chosen yet), `ownDays` (own days off, `[{date: 'MM-DD' | 'YYYY-MM-DD', name}]`, see `docs/dates.md`; write via `setOwnDays()`), `phone` (date a phone first connected, set by `notePhone()`), `onboarded` (date "Erste Schritte" was hidden).
 - Dates are `YYYY-MM-DD` without time. `end` is inclusive.
 - IDs come from `uid()` (7 chars base36). New people get `p` + `uid()`, contacts `k` + `uid()`, follow-ups of recurring todos `<series>-<YYYYMMDD>`. Merging relies on ids, never reuse them.
 

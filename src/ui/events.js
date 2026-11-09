@@ -59,6 +59,8 @@ document.addEventListener('click',async e=>{
       case'cap-type':if(a.dataset.v!==capSheet?.type)openCapture(a.dataset.v);break;
       case'more-menu':openMore();break;
       case'region':closeDrawer(false);openRegion();break;
+      case'own-day-del':removeOwnDay(id);break;
+      case'own-day-preset':{const err=addOwnDay(id,OWN_PRESETS.find(p=>p[0]===id)[1]);if(err!==KEEP_OPEN)$('#drawer .d-err').textContent=err;break}
       case'tour':startTour();break;
       case'onb-quick':if(isPhone()){capSheet=null;openCapture('todo')}else{const q=$('#quick');q?.scrollIntoView({block:'center'});q?.focus()}break;
       case'onb-phone':phoneHint();break;
@@ -92,6 +94,7 @@ document.addEventListener('mousedown',e=>{if(e.target.closest('#sugList'))e.prev
 document.addEventListener('keyup',e=>{if(suggestField(e.target)&&/^(ArrowLeft|ArrowRight|Home|End)$/.test(e.key))updateSuggest(e.target)});
 document.addEventListener('focusout',e=>{if(sug&&e.target===sug.input)closeSuggest()});
 document.addEventListener('change',e=>{if(e.target.id==='histPerson'){ui.hist.pid=e.target.value;render()}
+  if(e.target.name==='region'&&drawerCfg?.holidays)setRegion(e.target.value);
   if(e.target.id==='forPerson'){ui.forPid=e.target.value;ui.showDone=false;render()}});
 /* Date fields (phone): the native picker writes TT.MM.JJJJ into the text field; typed dates move the picker and are tidied on leaving the field.
    Every device: a start field with data-to pushes its end along when the end lies before the new start (an empty end stays empty). */

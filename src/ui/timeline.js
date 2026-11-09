@@ -45,11 +45,11 @@ function headHTML(){
   if(T.fine){
     h=T.cols.map(c=>{const w=wdOf(c.d),we=w===0||w===6,td=c.d===TDN,kw=!T.week&&w===1&&c.d!==T.start;
       const hol=holidayOn(c.d);
-      if(hol)return`<div class="hc dl hol${kw?' wkb':''}${td?' td':''}" style="left:${c.x}px;width:${c.w}px;top:0;height:${hh}px" title="${esc(hol)}, Feiertag">${c.w<100?`<b>${WD[w]}</b>${dmN(c.d)}`:`<b>${esc(hol)}</b>${WD[w]} ${td?'heute':dmN(c.d)}`}</div>`;
+      if(hol)return`<div class="hc dl hol${kw?' wkb':''}${td?' td':''}" style="left:${c.x}px;width:${c.w}px;top:0;height:${hh}px" title="${esc(holLabel(c.d))}">${c.w<100?`<b>${WD[w]}</b>${dmN(c.d)}`:`<b>${esc(hol)}</b>${WD[w]} ${td?'heute':dmN(c.d)}`}</div>`;
       return`<div class="hc dl${kw?' wkb':''}${we?' we':''}${td?' td':''}" style="left:${c.x}px;width:${c.w}px;top:0;height:${hh}px"><b>${we||c.w<140?WD[w]:WDL[w]}</b>${td?'Heute':dmN(c.d)}${!T.week&&w===1&&c.w>=110?`<i>KW ${isoWeek(c.d)}</i>`:''}</div>`}).join('');
   }else{
     for(let i=0;i<T.weeks;i++){const c=T.cols[i*7];h+=`<div class="hc wk" style="left:${c.x}px;width:${7*c.w}px;top:0;height:30px"><b>KW ${isoWeek(c.d)}</b>${dmN(c.d)}</div>`}
-    h+=T.cols.map(c=>{const w=wdOf(c.d),hol=holidayOn(c.d);return`<div class="hc day${w===0||w===6||hol?' we':''}${c.d===TDN?' td':''}" style="left:${c.x}px;width:${c.w}px;top:30px;height:24px"${hol?` title="${esc(hol)}, Feiertag"`:''}><span>${new Date(c.d*DAYMS).getUTCDate()}</span></div>`}).join('');
+    h+=T.cols.map(c=>{const w=wdOf(c.d),hol=holidayOn(c.d);return`<div class="hc day${w===0||w===6||hol?' we':''}${c.d===TDN?' td':''}" style="left:${c.x}px;width:${c.w}px;top:30px;height:24px"${hol?` title="${esc(holLabel(c.d))}"`:''}><span>${new Date(c.d*DAYMS).getUTCDate()}</span></div>`}).join('');
   }
   return`<div class="tl-head" style="height:${hh}px"><div class="tl-corner"></div><div class="tl-hcols" style="width:${T.width}px;height:${hh}px">${h}</div></div>`;
 }

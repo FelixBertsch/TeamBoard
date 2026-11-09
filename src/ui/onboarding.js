@@ -28,12 +28,35 @@ function phoneHint(){
   showDialog({title:'Auf dem Smartphone einrichten',text:`Öffne <b>${esc(appUrl())}</b> auf dem iPhone in Safari, tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“.
     Starte das Teamboard danach vom Home-Bildschirm und verbinde es dort mit demselben Token und Passwort. Die App auf dem Home-Bildschirm hat einen eigenen Speicher, deshalb nicht in Safari einrichten.<br><br>
     Auf Android wählst du in Chrome im Menü „Zum Startbildschirm hinzufügen“.`,actions:[{label:'Schließen',kind:'primary'}]})}
+/* "Feiertage": the state and own days off. Every change applies at once (with undo), so closing the form never loses anything. */
+const OWN_PRESETS=[['12-24','Heiligabend'],['12-31','Silvester']];
+const ownDayText=o=>o.date.length===5?`${+o.date.slice(3)}.${+o.date.slice(0,2)}., jedes Jahr`:`${deDate(o.date)}, einmalig`;
 function openRegion(){
-  const cur=getSetting('region','');
-  openDrawer({title:'Feiertage',submitLabel:'Speichern',
-    body:field('Bundesland',`<select name="region">${REGIONS.map(([v,l])=>`<option value="${v}"${v===cur?' selected':''}>${esc(l)}</option>`).join('')}</select>`)
-      +'<p class="d-note">Feiertage erscheinen in der Zeitleiste wie Wochenenden, zählen nicht als Arbeitstage und landen unter „Zu klären“, wenn eine Aufgabe darauf fällt. Die Auswahl gilt auf allen deinen Geräten.</p>',
-    onSubmit:v=>{setSetting('region',v.region||'');save();toast(`Feiertage: ${regionName(v.region||'')}`,true)}})}
+  const cur=getSetting('region',null),own=ownDays(),presets=OWN_PRESETS.filter(([d])=>!ownDayAt(d)),sc=drawerCfg?.holidays?$('#drawer .d-body').scrollTop:0;
+  const next=[];for(let n=TDN;next.length<5&&n<TDN+400;n++)if(holidayOn(n))next.push(n);
+  openDrawer({title:'Feiertage',holidays:true,refresh:openRegion,
+    body:field('Bundesland',`<select name="region">${cur===null?'<option value="?" disabled selected>Bitte wählen</option>':''}${REGIONS.map(([v,l])=>`<option value="${v}"${v===cur?' selected':''}>${esc(l)}</option>`).join('')}</select>`)
+      +'<p class="d-note">Feiertage erscheinen in der Zeitleiste wie Wochenenden, zählen nicht als Arbeitstage und landen unter „Zu klären“, wenn eine Aufgabe darauf fällt. Alles hier gilt sofort und auf allen deinen Geräten.</p>'
+      +'<h4 class="d-sub">Eigene freie Tage</h4><p class="d-note">Tage, die deine Firma zusätzlich freigibt. Sie zählen wie Feiertage.</p>'
+      +`<div class="more-list own-days">${own.map(o=>`<div class="prow"><span class="pt">${esc(o.name)}</span><span class="pd">${ownDayText(o)}</span><button type="button" class="icon-btn" data-action="own-day-del" data-id="${esc(o.date)}" aria-label="${esc(o.name)} entfernen" title="Entfernen">${ic('x',18)}</button></div>`).join('')
+        ||'<p class="empty">Noch keine eigenen freien Tage. Lege unten einen an.</p>'}</div>`
+      +(presets.length?`<div class="own-presets">${presets.map(([d,l])=>`<button type="button" class="btn secondary sm" data-action="own-day-preset" data-id="${d}">${ic('plus',14)}${esc(l)} ${+d.slice(3)}.${+d.slice(0,2)}.</button>`).join('')}</div>`:'')
+      +`<div class="two">${field('Name',`<input name="ownName" autocomplete="off" placeholder="z. B. Betriebsausflug">`)}${field('Datum',dateIn('ownDate',''))}</div>`
+      +group('Wiederholung',radios('ownRepeat',[['year','Jedes Jahr'],['once','Einmalig']],'year'))
+      +'<div class="own-add"><button type="submit" class="btn secondary">Hinzufügen</button></div>'
+      +`<h4 class="d-sub">Nächste freie Tage</h4><div class="more-list">${next.map(n=>`<div class="prow static"><span class="pt">${esc(holidayOn(n))}</span><span class="pd">${WD[wdOf(n)]} ${deDate(ds(n))}</span></div>`).join('')}</div>`,
+    onSubmit:v=>{const name=(v.ownName||'').trim();if(!name)return'Bitte gib einen Namen ein.';if(!v.ownDate)return'Bitte wähle ein Datum.';
+      return addOwnDay(v.ownRepeat==='once'?v.ownDate:v.ownDate.slice(5),name,v.ownDate)}});
+  if(sc)$('#drawer .d-body').scrollTop=sc}
+/* Adds an own day off and reopens the form. iso: a full date to check against the legal holidays of that year. */
+function addOwnDay(date,name,iso=new Date(TDN*DAYMS).getUTCFullYear()+'-'+date){
+  const dup=ownDayAt(date);if(dup)return`Den ${ownDayText(dup).split(',')[0]} hast du schon als „${dup.name}“.`;
+  const legal=holidaysOf(+iso.slice(0,4),undefined,true)[dn(iso)];if(legal)return`Der ${dm(iso)} ist schon Feiertag (${legal}).`;
+  setOwnDays([...ownDays(),{date,name}]);save();render();openRegion();toast(`${name} als freier Tag eingetragen`,true);return KEEP_OPEN}
+function removeOwnDay(date){
+  const o=ownDays().find(x=>x.date===date);if(!o)return;
+  setOwnDays(ownDays().filter(x=>x!==o));save();render();openRegion();toast(`${o.name} entfernt`,true)}
+function setRegion(r){setSetting('region',r);save();render();openRegion();toast(`Feiertage: ${regionName(r)}`,true)}
 
 /* ----- Tour ----- */
 /* Steps per layout. sel: CSS selectors, the first visible one is highlighted; without sel the card sits in the middle. */

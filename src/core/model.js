@@ -61,7 +61,7 @@ const newEntry=o=>({id:uid(),...o,createdAt:new Date().toISOString()});
 const undoStack=[];let lastSaved=null;
 function save(){const now=JSON.stringify(S);if(lastSaved!==null&&lastSaved!==now){undoStack.push(lastSaved);if(undoStack.length>CFG.undoSteps)undoStack.shift()}lastSaved=now;Store.changed()}
 function undo(){if(!undoStack.length){toast('Nichts mehr rückgängig zu machen');return}const prev=undoStack.pop();S=JSON.parse(prev);lastSaved=prev;Store.changed();
-  if(location.hash.startsWith('#ma-')&&!S.people.some(p=>'#ma-'+p.id===location.hash))location.hash='uebersicht';render();toast('Rückgängig gemacht')}
+  if(location.hash.startsWith('#ma-')&&!S.people.some(p=>'#ma-'+p.id===location.hash))location.hash='uebersicht';render();if(drawerCfg?.refresh)drawerCfg.refresh();toast('Rückgängig gemacht')}
 function saveUi(){try{localStorage.setItem(KEY+'.ui',JSON.stringify({range:ui.range,fold:ui.fold,redSeen:ui.redSeen}))}catch(e){}}
 const snapshot=()=>JSON.stringify(S);
 /* Clears the undo stack, e.g. after loading a new state from another device. */

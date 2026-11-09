@@ -84,7 +84,7 @@ const stamp = d => d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-d
 
 /* Actions offered in the sidebar footer and in "Mehr", depending on mode. Each: [action, icon, label]. */
 function storageActions() {
-  const region = ['region', 'calendar', hasSetting('region') ? `Feiertage: ${regionName(getSetting('region', ''))}` : 'Feiertage wählen'];
+  const region = ['region', 'calendar', hasSetting('region') || ownDays().length ? `Feiertage: ${holidaySummary()}` : 'Feiertage wählen'];
   if (Store.mode === 'demo') return [region, ['tour', 'compass', 'Rundgang'], ['leave-demo', 'folder', 'Teamboard einrichten']];
   const a = [['export', 'download', 'Sicherung herunterladen'], ['import', 'upload', 'Sicherung einspielen']];
   if (FS_OK) a.push(Backup.dir && Backup.needsPermission ? ['backup-allow', 'folder', `Sicherungsordner ${Backup.dir.name} erlauben`]

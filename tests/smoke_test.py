@@ -3,7 +3,7 @@ End-to-end test for the Teamboard (Python 3 + Playwright with Chromium).
   pip install playwright && python -m playwright install chromium
   python tests/smoke_test.py            everything
   python tests/smoke_test.py iphone     only viewports whose name contains "iphone"
-Checks: demo mode, quick capture, views, todo markers with hover card, two-week view, calendar, holidays per state, drag-to-create, undo; GitHub sync against a mocked API
+Checks: demo mode, quick capture, views, todo markers with hover card, two-week view, calendar, holidays per state, own days off, drag-to-create, undo; GitHub sync against a mocked API
 (setup with repository detection, encryption, second device, merge of concurrent edits, offline start from cache, tour from a connected board);
 then per viewport (27", 13", iPhone portrait and landscape): no JS errors, no horizontal overflow,
 the main flows (touch on iPhone, incl. the team grid and moving a topic by hold and drag) and screenshots in tests/screenshots/.
@@ -614,14 +614,34 @@ with sync_playwright() as p:
     counts = pg.evaluate("['','HE','BY','BE','SN','TH','HH'].map(r=>Object.keys(holidaysOf(2027,r)).length).join()")
     check(counts == "9,10,12,10,11,11,10", f"holiday count per state in 2027 ({counts})")
     check(pg.evaluate("[holidaysOf(2026,'SN')[dn('2026-11-18')],holidaysOf(2027,'SN')[dn('2027-11-17')],holidaysOf(2029,'SN')[dn('2029-11-21')],Object.keys(holidaysOf(2017,'HH')).length].join()") == "Buß- und Bettag,Buß- und Bettag,Buß- und Bettag,9", "Buß- und Bettag and Reformationstag since 2018")
-    pg.click("#side [data-action=more-menu]"); pg.click("#drawer [data-action=region]"); pg.select_option("#dform [name=region]", "HE"); pg.click("#dform button[type=submit]"); pg.wait_for_timeout(100)
+    pg.click("#side [data-action=more-menu]"); pg.click("#drawer [data-action=region]"); pg.select_option("#dform [name=region]", "HE"); pg.wait_for_timeout(100)
+    region_open = pg.locator("body.drawer-open #dform [name=ownName]").count() == 1; pg.keyboard.press("Escape"); pg.wait_for_timeout(100)
     pg.click("#side [data-action=more-menu]"); hessen = "Feiertage: Hessen" in pg.inner_text("#drawer"); pg.keyboard.press("Escape"); pg.wait_for_timeout(100)
-    check(pg.evaluate("getSetting('region')") == "HE" and pg.evaluate("holidayOn(dn('2027-05-27'))") == "Fronleichnam" and hessen, "choose the state for holidays")
+    check(pg.evaluate("getSetting('region')") == "HE" and pg.evaluate("holidayOn(dn('2027-05-27'))") == "Fronleichnam" and hessen and region_open, "choose the state for holidays, applied at once")
     check(pg.evaluate("workdays('2027-03-22','2027-04-02')") == 8, "workdays leave out Karfreitag and Ostermontag")
     pg.evaluate("ui.range='week';ui.off=(mondayOf(dn('2026-12-21'))-mondayOf(TDN))/7;render()"); pg.wait_for_timeout(100)
     check(pg.locator(".hc.hol").count() == 2 and "1. Weihnachtstag" in pg.inner_text(".tl-head"), "holidays in the timeline header")
     pg.evaluate("S=TB.state();S.todos.push({id:'hol1',personId:'lena',kind:'team',title:'Feiertagsaufgabe',due:'2027-12-24',done:false,note:''});S.todos.find(t=>t.id==='hol1').due='2027-12-25';ui.off=0;render()")
     check(any("Feiertagsaufgabe" in t and "Feiertag" in t for t in pg.locator(".prow.issue").all_inner_texts()), "todo due on a holiday shows under Zu klären")
+    # own days off: added under "Feiertage", count like holidays, labelled "frei", removed with undo
+    pg.click("#side [data-action=more-menu]"); pg.click("#drawer [data-action=region]"); pg.wait_for_timeout(100)
+    pg.click("#drawer [data-action=own-day-preset][data-id='12-24']"); pg.wait_for_timeout(100)
+    pg.fill("#dform [name=ownName]", "Betriebsausflug"); pg.fill("#dform [name=ownDate]", "04.06.2027")
+    pg.click("#dform label:has(input[name=ownRepeat][value=once])"); pg.click("#dform .own-add button"); pg.wait_for_timeout(100)
+    own = pg.evaluate("JSON.stringify(getSetting('ownDays'))"); txt = pg.inner_text("#drawer")
+    check(own == '[{"date":"2027-06-04","name":"Betriebsausflug"},{"date":"12-24","name":"Heiligabend"}]', f"own days off are saved sorted by day ({own})")
+    check("24.12., jedes Jahr" in txt and "04.06.2027, einmalig" in txt and pg.locator("#drawer [data-action=own-day-preset]").count() == 1, "own days listed, used preset hidden")
+    check(pg.evaluate("[holidayOn(dn('2028-12-24')),isOwnDay(dn('2028-12-24')),holidayOn(dn('2028-06-04')),workdays('2027-12-20','2027-12-24'),holLabel(dn('2027-12-25'))].join()") == "Heiligabend,true,,4,1. Weihnachtstag, Feiertag", "own days count like holidays")
+    pg.fill("#dform [name=ownName]", "Doppelt"); pg.fill("#dform [name=ownDate]", "24.12.2030"); pg.click("#dform label:has(input[name=ownRepeat][value=year])"); pg.click("#dform .own-add button"); pg.wait_for_timeout(100)
+    dup = pg.inner_text("#drawer .d-err")
+    pg.fill("#dform [name=ownDate]", "03.10.2027"); pg.click("#dform .own-add button"); pg.wait_for_timeout(100)
+    check("schon" in dup and "schon Feiertag" in pg.inner_text("#drawer .d-err") and len(pg.evaluate("getSetting('ownDays')")) == 2, "duplicate and legal dates are refused")
+    pg.evaluate("ui.range='week';ui.off=(mondayOf(dn('2027-12-20'))-mondayOf(TDN))/7;render()"); pg.wait_for_timeout(100)
+    check(pg.locator(".hc.hol[title='Heiligabend, frei']").count() >= 1, "own day off in the timeline header, labelled frei")
+    pg.click("#drawer [data-action=own-day-del][data-id='12-24']"); pg.wait_for_timeout(100); gone = len(pg.evaluate("getSetting('ownDays')")) == 1
+    pg.click("#toast [data-action=undo]"); pg.wait_for_timeout(100)
+    check(gone and len(pg.evaluate("getSetting('ownDays')")) == 2 and "Heiligabend" in pg.inner_text("#drawer .own-days"), "remove an own day, undo brings it back into the open form")
+    pg.keyboard.press("Escape"); pg.evaluate("setSetting('ownDays',[]);ui.off=0;render()"); pg.wait_for_timeout(100)
     # due date in the text: "am", "zum", "bis", month names, "morgen" alone; other dates only after a keyword
     q = lambda s: pg.evaluate(f"(r=>[r.title||r.note,r.due||r.start||''].join('|'))(parseQuick({s!r},{{personId:'me',kind:'team'}}))")
     d = lambda js: pg.evaluate(js)

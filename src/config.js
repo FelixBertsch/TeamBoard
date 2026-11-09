@@ -16,10 +16,6 @@ const CFG = {
   // Days after its end that a "Krank" absence still shows as such; then it becomes "Abwesend" (no sick-day history).
   sickVisibleDays: 7,
 
-  // Extra days off on top of the legal holidays of the chosen state (src/core/holidays.js): 'MM-DD' every year, 'YYYY-MM-DD' once.
-  // Example: { '12-24': 'Heiligabend', '12-31': 'Silvester' }. Leave empty for the legal holidays only.
-  extraHolidays: {},
-
   defaultView: 'week', // 'week', 'two' or 'six'
   undoSteps: 40,
 };
