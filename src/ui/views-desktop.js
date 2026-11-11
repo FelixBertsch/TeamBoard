@@ -16,7 +16,7 @@ function todoRow(t,showPerson){
     t.kind==='mine'?'<span class="badge mine">Meins</span>':t.kind==='waiting'?'<span class="badge wait">Wartet</span>':''}${
     showPerson?`<span class="who">${avatar(p,'xs')}<span>${esc(p.id==='me'?'Ich':firstName(p))}</span></span>`:''}</span></span>
     ${t.done?`<span class="due done-at" title="${t.doneAt?'Erledigt am '+esc(longDay(t.doneAt)):'Erledigt, ohne Datum'}">${t.doneAt?ic('check',12,3)+esc(dueLabel(t.doneAt)):''}</span>`
-      :`<span class="due${late?' late':today?' today':''}">${t.due?esc(dueLabel(t.due)):''}</span>`}</div>`;
+      :`<span class="due${late?' late':today?' today':''}">${t.due?esc(dueLabel(t.due)):'Ohne Frist'}</span>`}</div>`;
 }
 
 /* ----- Overview ----- */
@@ -32,18 +32,22 @@ function overviewHeadline(){
   return s;
 }
 const todayOverline=()=>{const d=new Date(TDN*DAYMS),hol=holidayOn(TDN);return`${WDL[d.getUTCDay()]}, ${d.getUTCDate()}. ${MON[d.getUTCMonth()]}, KW ${isoWeek(TDN)}${hol?`, ${hol}`:''}`};
-/* Open todos for the current filter, grouped by due date. Used by the desktop overview and the phone's "Heute" view. */
+/* Filter first, then show every current/undated todo per person, or just their nearest future todo.
+   Only the remaining future todos go under "Später". Shared with the phone's "Heute" view. */
 function todoGroups(f){
   const open=S.todos.filter(t=>!t.done&&isActive(t.personId)&&(f==='alle'||(f==='team'&&t.kind==='team'&&t.personId!=='me')||(f==='meine'&&(t.kind==='mine'||t.personId==='me'))||(f==='wartet'&&t.kind==='waiting'))).sort(byDue);
-  const we=ds(mondayOf(TDN)+6),ne=ds(mondayOf(TDN)+13),g={late:[],today:[],week:[],next:[],later:[]};
-  for(const t of open){if(!t.due)g.later.push(t);else if(t.due<TODAY)g.late.push(t);else if(t.due===TODAY)g.today.push(t);else if(t.due<=we)g.week.push(t);else if(t.due<=ne)g.next.push(t);else g.later.push(t)}
+  const g={current:[],later:[],late:open.filter(t=>t.due&&t.due<TODAY),today:open.filter(t=>t.due===TODAY),undated:open.filter(t=>!t.due)},people=new Map();
+  for(const t of open){if(!people.has(t.personId))people.set(t.personId,[]);people.get(t.personId).push(t)}
+  for(const list of people.values()){
+    const current=list.filter(t=>!t.due||t.due<=TODAY),shown=current.length?current:list.slice(0,1);
+    g.current.push(shown);g.later.push(...list.filter(t=>!shown.includes(t)))}
+  g.later.sort(byDue);
   return{open,g};
 }
 function todoListHTML(f){
   const{open,g}=todoGroups(f);
-  const grp=(k,title,cls='')=>g[k].length?`<div class="grp ${cls}">${title}<span class="n">${g[k].length}</span></div>${g[k].map(t=>todoRow(t,true)).join('')}`:'';
-  let list=grp('late','Überfällig','late')+grp('today','Heute')+grp('week','Diese Woche')+grp('next','Nächste Woche');
-  if(g.later.length)list+=ui.more?grp('later','Später und ohne Frist'):`<div class="grp"><button class="link-btn" data-action="more">${g.later.length} weitere später oder ohne Frist anzeigen</button></div>`;
+  let list=g.current.map(list=>`<div class="grp">${esc(list[0].personId==='me'?'Ich':personOf(list[0].personId).name)}<span class="n">${list.length}</span></div>${list.map(t=>todoRow(t,false)).join('')}`).join('');
+  if(g.later.length)list+=ui.more?`<div class="grp">Später<span class="n">${g.later.length}</span></div>${g.later.map(t=>todoRow(t,true)).join('')}`:`<div class="grp"><button class="link-btn" data-action="more">${g.later.length} weitere später anzeigen</button></div>`;
   if(!open.length)list=`<p class="empty">Keine offenen Aufgaben in dieser Ansicht. ${isPhone()?'Mit dem Plus unten':'Mit N'} erfasst du die nächste.</p>`;
   return list;
 }

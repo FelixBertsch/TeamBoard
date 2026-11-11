@@ -55,16 +55,16 @@ function headHTML(){
 }
 const todoNote=t=>t.kind==='mine'?' (mein To-do)':t.kind==='waiting'?' (wartet)':'';
 function chipHTML(t,c,top){
-  const late=t.due<TODAY;
+  const late=!!t.due&&t.due<TODAY;
   return`<div class="tchip k-${t.kind}${late?' late':''}" data-todo="${t.id}" data-day="${c.d}" data-person="${t.personId}" data-ids="${t.id}" tabindex="0" role="button"
-    style="left:${c.x+5}px;top:${top}px;width:${c.w-10}px" aria-label="${esc(t.title)}${todoNote(t)}${late?`, überfällig seit ${dueLabel(t.due)}`:''}"><button class="mini-check" data-action="toggle" data-id="${t.id}" aria-label="Als erledigt markieren">${ic('check',10,3)}</button><span>${esc(t.title)}</span>${late?ic('alert',14):''}</div>`;
+    style="left:${c.x+5}px;top:${top}px;width:${c.w-10}px" aria-label="${esc(t.title)}${todoNote(t)}${!t.due?', Ohne Frist':late?`, überfällig seit ${dueLabel(t.due)}`:''}"><button class="mini-check" data-action="toggle" data-id="${t.id}" aria-label="Als erledigt markieren">${ic('check',10,3)}</button><span>${esc(t.title)}</span>${late?ic('alert',14):''}</div>`;
 }
 /* Marker for the todos of one person on one day in a narrow column. One todo: drag and click like a card. Several: the number,
    a click pins the hover card with the list. Its look follows the most urgent todo: overdue, then mine, team, waiting. */
 const MARK=24;
 function markHTML(list,c,top,pid){
-  const late=list.some(t=>t.due<TODAY),k=['mine','team','waiting'].find(k=>list.some(t=>t.kind===k))||'team',n=list.length,size=Math.min(MARK,c.w-6);
-  const label=n===1?`${list[0].title}${todoNote(list[0])}${late?`, überfällig seit ${dueLabel(list[0].due)}`:''}`:`${n} Aufgaben am ${dmN(c.d)}${late?', davon überfällig':''}`;
+  const late=list.some(t=>t.due&&t.due<TODAY),k=['mine','team','waiting'].find(k=>list.some(t=>t.kind===k))||'team',n=list.length,size=Math.min(MARK,c.w-6);
+  const label=n===1?`${list[0].title}${todoNote(list[0])}${!list[0].due?', Ohne Frist':late?`, überfällig seit ${dueLabel(list[0].due)}`:''}`:`${n} Aufgaben am ${dmN(c.d)}${late?', davon überfällig':''}`;
   return`<div class="tmark k-${k}${late?' late':''}${n>1?' multi':''}" ${n===1?`data-todo="${list[0].id}" `:''}data-day="${c.d}" data-person="${pid}" data-ids="${list.map(t=>t.id).join(' ')}" tabindex="0" role="button"
     aria-label="${esc(label)}" style="left:${c.x+(c.w-size)/2}px;top:${top}px;width:${size}px;height:${size}px">${n>1?`<b>${n}</b>`:late?ic('bang',Math.min(14,size-6),3):''}</div>`;
 }
@@ -104,7 +104,7 @@ function timeline(ids){
     const own=placeLanes(S.topics.filter(t=>t.personId===id&&dn(t.end)>=T.start&&dn(t.start)<=T.end).sort(byStart)),placed=own.placed;
     const inv=placeLanes(involvedTopics(id,T.start,T.end)),wTop=10+own.n*LANE;
     const byDay={};
-    for(const t of S.todos){if(t.done||t.personId!==id||!t.due)continue;let d=dn(t.due);if(d<TDN&&todayIn)d=TDN;if(d<T.start||d>T.end)continue;(byDay[d]=byDay[d]||[]).push(t)}
+    for(const t of S.todos){if(t.done||t.personId!==id)continue;let d=t.due?dn(t.due):TDN;if(d<TDN&&todayIn)d=TDN;if(d<T.start||d>T.end)continue;(byDay[d]=byDay[d]||[]).push(t)}
     let chips='',stack=0;const top0=wTop+inv.n*WLANE+(inv.n?4:0);
     for(const d in byDay){const list=byDay[d].sort(byDue),c=colOf(+d);
       if(c.w>=CHIP_MIN){stack=Math.max(stack,list.length);list.forEach((t,i)=>{chips+=chipHTML(t,c,top0+i*CH)})}
@@ -140,9 +140,9 @@ const HOVER_MS=150,HOVER_CHIP_MS=350;
 let pop=null; // {el, mark, pinned, timer}
 function popHTML(mark){
   const d=+mark.dataset.day,ids=mark.dataset.ids.split(' '),list=S.todos.filter(t=>ids.includes(t.id)).sort(byDue),p=personOf(mark.dataset.person);
-  const items=list.map(t=>{const late=t.due<TODAY;
+  const items=list.map(t=>{const late=!!t.due&&t.due<TODAY;
     return`<li><button type="button" class="tp-i k-${t.kind}${late?' late':''}" data-action="edit-todo" data-id="${t.id}"><span class="tp-dot"></span><span class="tp-t"><b>${esc(t.title)}</b>
-      <small>${esc(kindLabel(t.kind,p))}${withOf(t).length?`, mit ${esc(withNames(t))}`:''}${t.repeat?`, ${esc(repeatLabel(t.repeat).toLowerCase())}`:''}, ${late?`überfällig seit ${esc(dueLabel(t.due))}`:`fällig ${esc(dueLabel(t.due))}`}</small>${t.note?`<span class="tp-n">${esc(t.note)}</span>`:''}</span></button></li>`}).join('');
+      <small>${esc(kindLabel(t.kind,p))}${withOf(t).length?`, mit ${esc(withNames(t))}`:''}${t.repeat?`, ${esc(repeatLabel(t.repeat).toLowerCase())}`:''}, ${!t.due?'Ohne Frist':late?`überfällig seit ${esc(dueLabel(t.due))}`:`fällig ${esc(dueLabel(t.due))}`}</small>${t.note?`<span class="tp-n">${esc(t.note)}</span>`:''}</span></button></li>`}).join('');
   return`<div class="tp-head"><b>${esc(d===TDN?'Heute':longDay(ds(d)))}</b><span>${list.length===1?'1 Aufgabe':`${list.length} Aufgaben`}</span></div><ul>${items}</ul>`;
 }
 function showPop(mark,pinned=false){

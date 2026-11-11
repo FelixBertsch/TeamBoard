@@ -46,6 +46,101 @@ def shot(pg, name, tag):
 def state(pg, js):
     return pg.evaluate("()=>{const S=TB.state();return " + js + "}")
 
+def todo_display(browser):
+    """Display-only regression: current tasks per person and undated todos travel with today."""
+    for phone in [False, True]:
+        name = "todo-phone" if phone else "todo-desktop"
+        pg = browser.new_page(viewport={"width": 393 if phone else 1920, "height": 852 if phone else 1080},
+                              is_mobile=phone, has_touch=phone, locale="de-DE")
+        pg.clock.install(time="2026-11-09T12:00:00")
+        pg.goto(BASE + "?demo=1&nosw=1#uebersicht"); pg.wait_for_timeout(200)
+        pg.evaluate("""()=>{S.todos=[];S.topics=[];S.absences=[];S.assignments=[];S.talks=[];
+          const add=(id,personId,due,kind='team',done=false)=>S.todos.push({id,personId,due,kind,done,title:id});
+          add('late','lena',ds(TDN-1));add('today','lena',TODAY);
+          for(let i=0;i<7;i++)add('undated'+i,'lena',i%2?null:'');delete S.todos.find(t=>t.id==='undated0').due;
+          add('future','lena',ds(TDN+2));add('mine-preview','lena',ds(TDN+3),'mine');
+          add('nearest','jonas',ds(TDN+1));add('tie','jonas',ds(TDN+1));add('far','jonas',ds(TDN+20));
+          add('waiting','aylin',null,'waiting');add('personal-undated','aylin',null,'mine');add('own','me',null);
+          add('completed','lena',null,'team',true);
+          S.people.push({id:'former',name:'Robin Beispiel',archived:'2026-01-01'});add('archived','former',null);
+          ui.filter='alle';ui.more=false;ui.grp={};ui.fold.todos=true;render()}""")
+        before = state(pg, "JSON.stringify(S.todos)")
+        card = pg.locator('[data-tour=todos]')
+        ids = lambda: card.locator('.todo-title').evaluate_all("es=>es.map(e=>e.dataset.id)")
+        current = ['late', 'today'] + [f'undated{i}' for i in range(7)] + ['nearest', 'waiting', 'personal-undated', 'own']
+        check(set(ids()) == set(current), f"[{name}] all current/undated tasks and exactly one nearest future per person")
+        check(card.locator('.grp').evaluate_all("es=>es.slice(0,3).map(e=>[e.firstChild.textContent,e.querySelector('.n').textContent])")
+              == pg.evaluate("[[personOf('lena').name,'9'],[personOf('jonas').name,'1'],['Ich','1']]"),
+              f"[{name}] current section grouped by person")
+        check(card.locator('.todo:has([data-id=nearest]) .due').inner_text() == pg.evaluate("dueLabel(ds(TDN+1))"),
+              f"[{name}] future-only preview keeps its real date")
+        check(card.locator('.todo:has([data-id=undated0]) .due').inner_text() == 'Ohne Frist'
+              and card.locator('.due.late').count() == 1, f"[{name}] undated label without overdue status")
+        check(not any(s in card.inner_text() for s in ['Diese Woche', 'Rest der Woche', 'Nächste Woche', 'Später und ohne Frist']),
+              f"[{name}] no obsolete date groups")
+        SHOTS.mkdir(parents=True, exist_ok=True)
+        card.screenshot(path=str(SHOTS / f'{name}-current.png'))
+        pg.locator('[data-action=fold-grp][data-v=later]' if phone else '[data-action=more]').click()
+        check(set(ids()) == set(current + ['future', 'mine-preview', 'tie', 'far']) and len(ids()) == len(set(ids())),
+              f"[{name}] remaining future tasks only under Später, preview not duplicated")
+        check(card.locator('.todo-title').evaluate_all("es=>es.filter(e=>e.dataset.id.startsWith('undated')).length") == 7,
+              f"[{name}] all undated tasks remain visible after expansion")
+        for f, expected in [('team', ['late', 'today'] + [f'undated{i}' for i in range(7)] + ['nearest']),
+                            ('meine', ['mine-preview', 'personal-undated', 'own']), ('wartet', ['waiting'])]:
+            pg.evaluate("f=>{ui.more=false;ui.grp={};ui.filter=f;render()}", f)
+            check(set(ids()) == set(expected), f"[{name}] {f} filter applied before per-person fallback")
+        pg.evaluate("()=>{ui.filter='alle';render()}")
+        if phone:
+            go(pg, 'team')
+            today_ids = pg.locator('.dday .todo-title').evaluate_all("es=>es.map(e=>e.dataset.id)")
+            check(set(today_ids) == set(['late', 'today', 'own', 'waiting', 'personal-undated'] + [f'undated{i}' for i in range(7)]),
+                  f"[{name}] today day list has actionable due, overdue and undated tasks, no completed")
+            check(pg.locator('.dd:has([data-id=undated0]) .dd-meta').inner_text() == 'eine Aufgabe fällig\n7 ohne Frist\n1 überfällig',
+                  f"[{name}] undated tasks counted separately from due tasks")
+            check(pg.locator('.dd:has([data-id=waiting]) .dd-meta').count() == 1
+                  and pg.locator('.dd:has([data-id=waiting]) .dd-meta').inner_text() == '2 ohne Frist'
+                  and pg.locator('.dd:has([data-id=waiting]) .due').all_inner_texts() == ['Ohne Frist', 'Ohne Frist']
+                  and pg.locator('.dd:has([data-id=waiting]) .due.late').count() == 0,
+                  f"[{name}] undated waiting and mine tasks assigned to another person are shown and counted")
+            pg.locator('.dday').screenshot(path=str(SHOTS / f'{name}-day-list.png'))
+            pg.locator('[data-action=team-day]').nth(1).tap(); pg.wait_for_timeout(100)
+            check(pg.locator('.dday .todo-title').evaluate_all("es=>es.map(e=>e.dataset.id)") == ['nearest', 'tie'],
+                  f"[{name}] another day excludes undated tasks of every kind and overdue tasks")
+            pg.locator('[data-action=team-day]').first.tap(); pg.wait_for_timeout(100)
+            pg.locator('.dday .todo-title[data-id=undated0]').tap()
+            check(pg.input_value('#dform [name=due]') == '', f"[{name}] opening an undated todo keeps date field empty")
+            pg.keyboard.press('Escape')
+        else:
+            for view in ['week', 'two', 'six']:
+                pg.evaluate("v=>{ui.range=v;render()}", view)
+                mark = pg.locator('.tl [data-ids~="undated0"]')
+                check(mark.count() == 1 and mark.get_attribute('data-day') == pg.evaluate('String(TDN)'),
+                      f"[{name}] undated todo on today in {view} timeline")
+                mark.scroll_into_view_if_needed(); pg.wait_for_timeout(100)
+                mark.focus(); pg.wait_for_timeout(100)
+                check(pg.locator('#tlPop [data-id=undated0]').count() == 1
+                      and 'Ohne Frist' in pg.inner_text('#tlPop [data-id=undated0]')
+                      and 'late' not in pg.locator('#tlPop [data-id=undated0]').get_attribute('class'),
+                      f"[{name}] {view} calendar hover says Ohne Frist, not overdue")
+                check(pg.locator('.tl [data-ids~="completed"]').count() == 0, f"[{name}] completed undated todo absent in {view}")
+            pg.evaluate("()=>{ui.range='week';ui.off=1;render()}")
+            check(pg.locator('.tl [data-ids~="undated0"]').count() == 0, f"[{name}] undated todo not shown in other week")
+        check(state(pg, 'JSON.stringify(S.todos)') == before, f"[{name}] rendering, filtering and opening never mutate dates")
+        # Reload on the next day with the same fixture, including absent, null and empty due fields.
+        fixture = state(pg, 'S.todos')
+        pg.clock.set_system_time('2026-11-10T12:00:00')
+        pg.reload(); pg.wait_for_timeout(200)
+        pg.evaluate("todos=>{S.todos=todos;ui.fold.todos=true;ui.off=0;ui.range='week';render()}", fixture)
+        if phone:
+            go(pg, 'team')
+            moved = pg.locator('.dday .todo-title[data-id=undated0]').count() == 1 and 'Dienstag' in pg.inner_text('.dday h2')
+        else:
+            go(pg, 'uebersicht')
+            moved = pg.locator('.tl [data-ids~="undated0"]').get_attribute('data-day') == pg.evaluate('String(TDN)')
+        check(moved and state(pg, 'JSON.stringify(S.todos)') == before, f"[{name}] undated todo migrates with today without assigning a due date")
+        check(overflow(pg) <= 0, f"[{name}] no horizontal overflow")
+        pg.close()
+
 def desktop_flows(pg, name):
     c = lambda cond, msg: check(cond, f"[{name}] {msg}")
     pg.goto(BASE + "?demo=1&nosw=1"); pg.wait_for_timeout(300)
@@ -58,7 +153,7 @@ def desktop_flows(pg, name):
     c(overflow(pg) <= 0 and pg.locator(".hrow").count() > 0, "history view without overflow")
     shot(pg, name, "verlauf")
     go(pg, "uebersicht")
-    c(pg.locator(".grp.late").count() == 1 and "überfällig" in pg.inner_text(".lead"), "today and overdue visible")
+    c(pg.locator('[data-tour=todos] .due.late').count() > 0 and "überfällig" in pg.inner_text(".lead"), "today and overdue visible")
     c(pg.locator(".abs").count() > 0 and pg.locator("text=Mira, Urlaub").count() > 0, "absence visible")
     c(pg.locator("#side .brand img:visible").count() == 1, "logo shown once")
     pg.click('#side a[href="#ma-lena"]'); pg.wait_for_timeout(120)
@@ -121,7 +216,7 @@ def phone_flows(pg, name, w, h):
         c(overflow(pg) <= 0, f"no horizontal overflow ({tag})")
         shot(pg, name, tag)
     go(pg, "uebersicht")
-    c(pg.inner_text("h1") == "Heute" and pg.locator(".grp.late").count() == 1, "today and overdue visible")
+    c(pg.inner_text("h1") == "Heute" and pg.locator('[data-tour=todos] .due.late').count() > 0, "today and overdue visible")
     c(pg.locator(".away").count() > 0, "absent people visible")
     small = pg.evaluate("""()=>[...document.querySelectorAll('.lay-phone .check,.tab-i,.tab-plus,.away:not(.badge),.fold-t,.grp-f')].filter(e=>{const r=e.getBoundingClientRect();
       const s=getComputedStyle(e,'::before');const ext=s.content!=='none'?20:0;return r.width>0&&(Math.min(r.width,r.height)+ext)<44}).length""")
@@ -208,10 +303,10 @@ def today_folds(pg, name):
     tap = lambda sel: (pg.locator(sel).first.tap(), pg.wait_for_timeout(150))
     go(pg, "uebersicht")
     c(pg.locator("text=Projekte heute").count() == 0, "Heute without the projects panel")
-    c(pg.locator(".fold.open .grp.late").count() == 1 and pg.locator(".grp-f[data-v=week]").count() == 1 and pg.locator(".todo:has-text('Partner-Sandbox')").count() == 0,
-      "todos: overdue and today open, the rest of the week folded")
-    tap(".grp-f[data-v=week]")
-    c(pg.locator(".todo:has-text('Partner-Sandbox')").count() == 1, "a folded todo group opens")
+    c(pg.locator(".fold.open .due.late").count() > 0 and pg.locator(".grp-f[data-v=later]").count() == 1 and pg.locator(".todo:has-text('Partner-Sandbox')").count() == 0,
+      "todos: current tasks open per person, remaining future tasks folded")
+    tap(".grp-f[data-v=later]")
+    c(pg.locator(".todo:has-text('Partner-Sandbox')").count() == 1, "the later todo group opens")
     c(pg.locator(".fold:not(.open) .fold-t[data-v=abs]").count() == 1 and "abwesend" in pg.inner_text(".fold-t[data-v=abs] .fold-s"), "Abwesenheiten folded with a summary")
     tap(".fold-t[data-v=abs]")
     c(pg.locator(".fold.open .prow[data-action=edit-absence]").count() > 0 and pg.locator(".fold-h [data-action=new-absence]").count() == 1, "a card opens with its rows and action")
@@ -235,7 +330,9 @@ def team_grid(pg, name, w, h):
     if w < h:
         c(pg.locator(".wg-d").count() == 5 and dw > 50, f"upright: five workdays, {dw:.0f} px per day")
         tap(".wg-d >> nth=2")
-        c(pg.inner_text(".dday h2").startswith("Mittwoch"), "tap on a day shows it below")
+        # Today's heading intentionally includes "Heute, ", also when the selected day is Wednesday.
+        expected = pg.evaluate("(()=>{const d=mondayOf(TDN)+7*ui.toff+2;return (d===TDN?'Heute, ':'')+'Mittwoch, '+dmN(d)})()")
+        c(pg.inner_text(".dday h2") == expected, "tap on a day shows it below")
         c("off" in pg.locator(".dd").last.get_attribute("class") and pg.locator(".dd.off").count() >= 1, "absent people at the end of the day list")
         kw = pg.inner_text(".wk-l b"); tap(".wk-nav [data-v='1']")
         c(pg.inner_text(".wk-l b") != kw and pg.locator(".wk-nav [data-v='0']").count() == 1, "next week")
@@ -423,6 +520,9 @@ def sync_flows(b):
 
 with sync_playwright() as p:
     b = p.chromium.launch()
+    todo_display(b)
+    if ONLY == 'todo-display':
+        b.close(); srv.shutdown(); sys.exit(1 if fails else 0)
     pg = b.new_page(viewport={"width": 1536, "height": 1000}, locale="de-DE")
     errors = []
     pg.on("pageerror", lambda e: errors.append(str(e)))

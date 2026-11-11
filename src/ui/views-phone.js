@@ -7,7 +7,7 @@ function awayChips(){
   return`<div class="m-row" role="group" aria-label="Abwesend">${list.map(a=>{const p=personOf(a.personId),now=a.start<=TODAY,n=p.id==='me'?'Ich':firstName(p);
     return`<button class="away${now?'':' soon'}" data-action="edit-absence" data-id="${a.id}">${avatar(p,'sm')}${esc(n)}, ${esc(absLabel(a.kind))} ${a.half?(now?'heute':wd(a.start))+' '+HALF[a.half]:now?'bis '+wd(a.end):'ab '+wd(a.start)}</button>`}).join('')}</div>`;
 }
-/* "Heute": todos due today or overdue, the rest of the list and the other panels fold. Each card shows a summary in its head,
+/* "Heute": current/undated todos per person, or their nearest future todo; the rest and the other panels fold. Each card shows a summary in its head,
    its open state is a device preference (ui.fold, saved by saveUi()). "Zu klären" opens by itself when a red issue appears
    that was not there when it was folded (ui.redSeen), because red issues must not be hidden. */
 function foldCard(key,title,sum,body,extra='',tour=''){const o=!!ui.fold[key];
@@ -15,17 +15,15 @@ function foldCard(key,title,sum,body,extra='',tour=''){const o=!!ui.fold[key];
     <h2 class="h4">${esc(title)}</h2><span class="fold-s">${sum}</span>${ic('chevR',20,2.5)}</button>${o?extra:''}</div>${o?`<div class="fold-b">${body}</div>`:''}</section>`}
 function todoListPhone(f){const{open,g}=todoGroups(f);
   if(!open.length)return`<p class="empty">Keine offenen Aufgaben in dieser Ansicht. Mit dem Plus unten erfasst du die nächste.</p>`;
-  const grp=(k,title,cls='')=>g[k].length?`<div class="grp ${cls}">${title}<span class="n">${g[k].length}</span></div>${g[k].map(t=>todoRow(t,true)).join('')}`:'';
-  const fg=(k,title)=>{if(!g[k].length)return'';const o=!!ui.grp[k];
-    return`<button type="button" class="grp-f" data-action="fold-grp" data-v="${k}" aria-expanded="${o}"><span>${title}</span><span class="n">${g[k].length}</span>${ic('chevR',18,2.5)}</button>${o?g[k].map(t=>todoRow(t,true)).join(''):''}`};
-  const rest=fg('week','Rest der Woche')+fg('next','Nächste Woche')+fg('later','Später und ohne Frist');
-  return grp('late','Überfällig','late')+grp('today','Heute')+(g.late.length+g.today.length?'':'<p class="empty">Heute ist nichts fällig.</p>')+(rest?`<div class="grp-fs">${rest}</div>`:'')}
+  const current=g.current.map(list=>`<div class="grp">${esc(list[0].personId==='me'?'Ich':personOf(list[0].personId).name)}<span class="n">${list.length}</span></div>${list.map(t=>todoRow(t,false)).join('')}`).join('');
+  const o=!!ui.grp.later,rest=g.later.length?`<button type="button" class="grp-f" data-action="fold-grp" data-v="later" aria-expanded="${o}"><span>Später</span><span class="n">${g.later.length}</span>${ic('chevR',18,2.5)}</button>${o?g.later.map(t=>todoRow(t,true)).join(''):''}`:'';
+  return current+(rest?`<div class="grp-fs">${rest}</div>`:'')}
 const redKeys=()=>issues().filter(i=>i.kind==='late').map(i=>i.act+':'+i.id+':'+i.text);
 function viewToday(banner=''){
   const{g}=todoGroups(ui.filter),open=issues(),red=redKeys();
   if(red.some(k=>!(ui.redSeen||[]).includes(k)))ui.fold.issues=true;
   const plural=(n,one,many)=>n===1?one:`${n} ${many}`;
-  const todoSum=[g.late.length?`<b class="s-late">${g.late.length} überfällig</b>`:'',g.today.length?`${g.today.length} heute`:''].filter(Boolean).join(' · ')||'heute nichts fällig';
+  const todoSum=[g.late.length?`<b class="s-late">${g.late.length} überfällig</b>`:'',g.today.length?`${g.today.length} heute`:'',g.undated.length?`${g.undated.length} ohne Frist`:''].filter(Boolean).join(' · ')||'heute nichts fällig';
   const issSum=red.length?`<b class="s-late">${red.length} dringend</b> · ${open.length} offen`:open.length?`${open.length} offen`:'alles geklärt';
   const now=absenceBlocks().filter(b=>b.start<=TODAY).length,abs=absenceBlocks().length;
   const absSum=now?`${plural(now,'eine Person','Personen')} abwesend`:abs?plural(abs,'eine geplant','geplant'):'niemand';
@@ -89,16 +87,16 @@ function viewTeam(banner=''){
 /* The selected day in words: per person project, topics with their end, involvement, absence, todos due. Absent people last. */
 function dayList(d,people){
   const day=ds(d),open=S.todos.filter(t=>!t.done),tones=toneMap();
-  const mine=(t,p)=>t.personId===p.id&&(p.id==='me'||t.kind==='team');
   const row=p=>{const a=absentOn(p.id,day),proj=p.id==='me'?'Meine Planung':projectLabel(p.id,currentAssignments(p.id,day))||'Ohne Projekt';
     const own=S.topics.filter(t=>t.personId===p.id&&t.start<=day&&t.end>=day).sort(byStart),inv=S.topics.filter(t=>withOf(t).includes(p.id)&&t.start<=day&&t.end>=day).sort(byStart);
-    const due=open.filter(t=>mine(t,p)&&t.due===day).length,late=d===TDN?open.filter(t=>mine(t,p)&&t.due&&t.due<TODAY).length:0;
+    const tasks=open.filter(t=>t.personId===p.id&&(t.due===day||(d===TDN&&(!t.due||t.due<TODAY)))).sort(byDue);
+    const due=tasks.filter(t=>t.due===day).length,late=d===TDN?tasks.filter(t=>t.due&&t.due<TODAY).length:0,undated=tasks.filter(t=>!t.due).length;
     const chip=t=>`<button type="button" class="dt ${t.status} tone-${tones[t.id]}" data-action="edit-topic" data-id="${t.id}"><span class="dt-t">${esc(t.title)}</span><small>${t.status==='geplant'?'geplant, ':t.status==='erledigt'?'erledigt, ':''}bis ${esc(WD[wdOf(dn(t.end))]+' '+dm(t.end))}</small></button>`;
     const ichip=t=>`<button type="button" class="dt inv" data-action="edit-topic" data-id="${t.id}">${ic('users',14)}<span class="dt-t">mit ${esc(ownerName(t))}: ${esc(t.title)}</span></button>`;
     const meta=(a?`<span class="badge away">${esc(absLabel(a.kind))} ${a.half?HALF[a.half]:'bis '+esc(WD[wdOf(dn(a.end))]+' '+dm(a.end))}</span>`:'')
-      +(due?`<span class="dd-due">${due===1?'eine Aufgabe fällig':due+' Aufgaben fällig'}</span>`:'')+(late?`<span class="badge late">${ic('alert',12,2.5)}${late} überfällig</span>`:'');
+      +(due?`<span class="dd-due">${due===1?'eine Aufgabe fällig':due+' Aufgaben fällig'}</span>`:'')+(undated?`<span class="dd-due">${undated} ohne Frist</span>`:'')+(late?`<span class="badge late">${ic('alert',12,2.5)}${late} überfällig</span>`:'');
     return{a,html:`<div class="dd${a&&!a.half?' off':''}"><a class="dd-who" href="${hrefOf(p.id)}">${avatar(p,'sm')}<span class="dd-nm"><b>${esc(p.id==='me'?'Ich':p.name)}</b><small>${esc(proj)}</small></span>${ic('chevR',18)}</a>
-      ${meta?`<div class="dd-meta">${meta}</div>`:''}<div class="dd-items">${own.map(chip).join('')}${inv.map(ichip).join('')}${own.length+inv.length?'':'<span class="dd-free">Kein Thema geplant</span>'}</div></div>`}};
+      ${meta?`<div class="dd-meta">${meta}</div>`:''}<div class="dd-items">${own.map(chip).join('')}${inv.map(ichip).join('')}${own.length+inv.length?'':'<span class="dd-free">Kein Thema geplant</span>'}${tasks.map(t=>todoRow(t,false)).join('')}</div></div>`}};
   const rows=people.map(row),hol=holidayOn(d);
   return`<section class="card card-pad dday" aria-live="polite"><div class="panel-head"><h2 class="h4">${d===TDN?'Heute, ':''}${esc(WDL[wdOf(d)])}, ${esc(dmN(d))}</h2></div>
     ${hol?`<p class="dd-hol">${esc(holLabel(d))}</p>`:''}${rows.filter(r=>!r.a).map(r=>r.html).join('')}${rows.filter(r=>r.a).map(r=>r.html).join('')}</section>`;
