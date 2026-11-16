@@ -184,6 +184,16 @@ h3{font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.02em;color:v
 .flag{width:18px;height:18px;border-radius:50%;background:var(--white);display:grid;place-items:center;flex:none;margin-left:-6px;pointer-events:none}
 .flag.late{color:var(--error-500)}
 .flag.warn{color:var(--warning-700)}
+/* "Wichtig": coral flag (impMark()); on topic bars inside the white circle of .flag, because coral is too weak on the mid and light navy */
+.imp{display:inline-flex;align-items:center;flex:none;font-style:normal;color:var(--imp)}
+.imp .ic,.tchip.late .imp .ic{color:var(--imp)}
+.flag.imp{color:var(--imp);font-style:normal}
+.flag.imp .ic{transform:translateX(1px)} /* the pole sits left in the glyph */
+.flag+.flag{margin-left:-2px}
+.pt .imp,.dt-t .imp,.tp-t b .imp,.todo-title .imp{margin-right:6px;vertical-align:-2px}
+.dt .imp{width:20px;height:20px;justify-content:center;border-radius:50%;background:var(--white);vertical-align:-4px} /* topic chips on the phone are navy too */
+.imp-tag .ic{margin-right:6px;color:var(--imp)}
+.legend .lg-imp .ic{color:var(--imp)}
 /* Topics of others the person is involved in (timeline.js wbarHTML): thin, dashed, never draggable */
 .wbar{position:absolute;height:22px;border-radius:999px;border:2px dashed var(--with-line);background:var(--with-bg);color:var(--with-fg);padding:0 10px 0 7px;
   display:flex;align-items:center;gap:5px;z-index:3;font:700 12px/18px var(--font);white-space:nowrap;overflow:hidden;cursor:pointer;text-align:left}

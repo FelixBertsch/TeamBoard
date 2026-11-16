@@ -9,7 +9,7 @@ function todoRow(t,showPerson){
   const p=personOf(t.personId),late=!t.done&&t.due&&t.due<TODAY,today=!t.done&&t.due===TODAY;
   const away=!t.done&&t.kind==='team'&&t.due&&t.personId!=='me'&&absentFull(t.personId,t.due);
   return`<div class="todo${t.done?' done':''}"><button class="check" data-action="toggle" data-id="${t.id}" aria-pressed="${t.done}" aria-label="${t.done?'Wieder öffnen':'Als erledigt markieren'}">${ic('check',14,3)}</button>
-    <span class="todo-body"><button class="todo-title" data-action="edit-todo" data-id="${t.id}">${esc(t.title)}</button><span class="todo-meta">${
+    <span class="todo-body"><button class="todo-title" data-action="edit-todo" data-id="${t.id}">${t.important&&!t.done?impMark():''}${esc(t.title)}</button><span class="todo-meta">${
     away?`<span class="badge away" title="An diesem Tag ${esc(absPhrase(away.kind))}">${esc(absLabel(away.kind))}</span>`:''}${
     !t.done&&t.repeat?`<span class="badge rep" title="Wiederholt sich, die nächste entsteht beim Abhaken">${ic('repeat',12,2.5)}${esc(repeatLabel(t.repeat))}</span>`:''}${
     withOf(t).length?`<span class="with" title="Beteiligt">${ic('users',14)}<span>${esc(withNames(t))}</span></span>`:''}${
@@ -148,7 +148,7 @@ function personParts(id){
   let tasks=`<div class="tabs" role="tablist" aria-label="Aufgabenart">${tabBtns}</div>${list}`;
   if(isMe){const fp=forPeople();if(ui.forPid&&!fp.some(x=>x.id===ui.forPid))ui.forPid='';if(fp.length)tasks=forSelect(fp)+(ui.forPid?forList(ui.forPid):tasks)}
   const ord={aktiv:0,geplant:1,erledigt:2};
-  const tops=S.topics.filter(t=>t.personId===id).sort((a,b)=>ord[a.status]-ord[b.status]||a.start.localeCompare(b.start));
+  const tops=S.topics.filter(t=>t.personId===id).sort((a,b)=>ord[a.status]-ord[b.status]||topicImp(b)-topicImp(a)||a.start.localeCompare(b.start));
   const absList=S.absences.filter(a=>a.personId===id&&a.end>=TODAY).sort((a,b)=>a.start.localeCompare(b.start));
   const talks=S.talks.filter(t=>t.personId===id&&!t.done);
   const talkPanel=isMe?'':`<section class="card card-pad" data-tour="talks"><div class="panel-head"><h2 class="h4">Fürs nächste Gespräch</h2></div>
@@ -161,15 +161,17 @@ function personParts(id){
   return{p,isMe,tasks,talkPanel,topicsPanel,absPanel,asgPanel:assignmentsPanel(id),review:reviewPanel(id),involved:isMe?'':involvedPanel(id)};
 }
 const TOPIC_ST={aktiv:'Aktiv',geplant:'Geplant',erledigt:'Erledigt'};
-const topicRow=t=>`<button class="prow" data-action="edit-topic" data-id="${t.id}"><span class="st ${t.status}">${TOPIC_ST[t.status]}</span><span class="pt">${esc(t.title)}${withOf(t).length?`<small class="with-s"> mit ${esc(withNames(t))}</small>`:''}</span><span class="pd">${dm(t.start)} bis ${dm(t.end)}</span></button>`;
+const topicMark=t=>t.important&&t.status!=='erledigt'?impMark(14):'';
+const byTopicImp=(a,b)=>topicImp(b)-topicImp(a);
+const topicRow=t=>`<button class="prow" data-action="edit-topic" data-id="${t.id}"><span class="st ${t.status}">${TOPIC_ST[t.status]}</span><span class="pt">${topicMark(t)}${esc(t.title)}${withOf(t).length?`<small class="with-s"> mit ${esc(withNames(t))}</small>`:''}</span><span class="pd">${dm(t.start)} bis ${dm(t.end)}</span></button>`;
 /* Person page: open topics and todos of others in which this person is involved (`with`). */
 function involvedPanel(id){
-  const tops=S.topics.filter(t=>t.status!=='erledigt'&&withOf(t).includes(id)),tds=S.todos.filter(t=>!t.done&&withOf(t).includes(id)).sort(byDue);
+  const tops=S.topics.filter(t=>t.status!=='erledigt'&&withOf(t).includes(id)).sort(byTopicImp),tds=S.todos.filter(t=>!t.done&&withOf(t).includes(id)).sort(byDue);
   if(!tops.length&&!tds.length)return'';
   const lead=t=>nameShort(personOf(t.personId));
   return`<section class="card card-pad"><div class="panel-head"><h2 class="h4">Beteiligt an</h2></div>
-    ${tops.map(t=>`<button class="prow" data-action="edit-topic" data-id="${t.id}"><span class="st ${t.status}">${TOPIC_ST[t.status]}</span><span class="pt">${esc(t.title)}</span><span class="pd">${esc(lead(t))}</span></button>`).join('')}
-    ${tds.map(t=>`<button class="prow" data-action="edit-todo" data-id="${t.id}"><span class="pt">${esc(t.title)}</span><span class="pd">${esc(lead(t))}${t.due?', '+esc(dueLabel(t.due)):''}</span></button>`).join('')}</section>`;
+    ${tops.map(t=>`<button class="prow" data-action="edit-topic" data-id="${t.id}"><span class="st ${t.status}">${TOPIC_ST[t.status]}</span><span class="pt">${topicMark(t)}${esc(t.title)}</span><span class="pd">${esc(lead(t))}</span></button>`).join('')}
+    ${tds.map(t=>`<button class="prow" data-action="edit-todo" data-id="${t.id}"><span class="pt">${t.important?impMark(14):''}${esc(t.title)}</span><span class="pd">${esc(lead(t))}${t.due?', '+esc(dueLabel(t.due)):''}</span></button>`).join('')}</section>`;
 }
 /* "Meine Planung", filter "Für": my todos and topics that mention a person, plus my to-dos about and waits for that person. */
 const forMatch=(t,x)=>(t.personId==='me'||t.kind!=='team')&&(t.personId===x||withOf(t).includes(x));
@@ -181,7 +183,7 @@ const forSelect=fp=>`<label class="for-sel"><span class="fl">Für</span><select 
   fp.map(x=>`<option value="${x.id}"${x.id===ui.forPid?' selected':''}>${esc(personOf(x.id).name)}${x.open?` (${x.open} offen)`:''}</option>`).join('')}</select></label>`;
 function forList(x){
   const f=nameShort(personOf(x)),items=S.todos.filter(t=>forMatch(t,x)),open=items.filter(t=>!t.done).sort(byDue),done=items.filter(t=>t.done).sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||''));
-  const tops=S.topics.filter(t=>t.personId==='me'&&withOf(t).includes(x)),ot=tops.filter(t=>t.status!=='erledigt'),dt=tops.filter(t=>t.status==='erledigt');
+  const tops=S.topics.filter(t=>t.personId==='me'&&withOf(t).includes(x)),ot=tops.filter(t=>t.status!=='erledigt').sort(byTopicImp),dt=tops.filter(t=>t.status==='erledigt');
   let h=open.length||ot.length?ot.map(topicRow).join('')+open.map(t=>todoRow(t,false)).join(''):`<p class="empty">Für ${esc(f)} ist nichts offen.</p>`;
   const nd=done.length+dt.length;
   if(nd)h+=`<div class="grp"><button class="link-btn" data-action="show-done">${ui.showDone?'Erledigte ausblenden':`${nd===1?'1 erledigte':nd+' erledigte'} anzeigen`}</button></div>`

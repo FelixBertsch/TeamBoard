@@ -44,11 +44,12 @@ function openCapture(type='todo',keep=null,preset={}){
   }
   if(type==='topic'){
     const last=capSheet.topic||{},t={pid:preset.personId||last.pid||pid,start:preset.start||last.start||TODAY,end:preset.end||last.end||ds(TDN+4),
-      status:preset.status||last.status||'geplant',focus:last.focus||'main',note:last.note||'',with:preset.with??last.with??''};
+      status:preset.status||last.status||'geplant',focus:last.focus||'main',note:last.note||'',with:preset.with??last.with??'',important:preset.important??!!last.important};
     openDrawer({...base,submitLabel:'Thema anlegen',
       body:field('Titel',`<input name="title" value="${text}" autocomplete="off" enterkeyhint="done" autofocus placeholder="z. B. Payment-API v2">`)
         +group('Verantwortlich',radios('pid',people,t.pid))
         +`<div class="two">${field('Start',dateIn('start',t.start,{to:'end'}))}${field('Ende',dateIn('end',t.end,{from:'start'}))}</div>`
+        +impGroup(t.important)
         +`<details class="cap-more"><summary>${ic('chevR',18,2.5)}Weitere Angaben</summary>`
         +field('Beteiligt',`<input id="withIn" name="with" value="${esc(t.with)}" autocomplete="off" spellcheck="false" placeholder="@Name, auch mehrere" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugList">`)
         +group('Status',radios('status',[['geplant','Geplant'],['aktiv','Aktiv'],['erledigt','Erledigt']],t.status))
@@ -57,7 +58,7 @@ function openCapture(type='todo',keep=null,preset={}){
         +field('Notiz',`<textarea name="note" rows="3" placeholder="Kontext, Abhängigkeiten, Ansprechpartner">${esc(t.note)}</textarea>`)+'</details>',
       onSubmit:v=>{const title=(v.title||'').trim();if(!title)return'Bitte gib einen Titel ein.';if(!v.start||!v.end)return'Bitte setze Start und Ende.';
         let{start,end}=v;if(end<start)[start,end]=[end,start];const w=parseWith(v.with,null);if(w.err)return w.err;
-        const o=newEntry({personId:v.pid||'me',title,start,end,status:v.status||'geplant',note:v.note||''});setWith(o,w.ids);if(v.focus==='side')o.side=true;
+        const o=newEntry({personId:v.pid||'me',title,start,end,status:v.status||'geplant',note:v.note||''});setWith(o,w.ids);setImp(o,v.important);if(v.focus==='side')o.side=true;
         if(o.status==='erledigt')o.doneAt=TODAY;S.topics.push(o);save();toast('Thema angelegt',true)}});
     return;
   }
@@ -76,13 +77,14 @@ function openCapture(type='todo',keep=null,preset={}){
       +group('Für',radios('pid',people,pid))
       +`<div class="kind-g">${group('Art',radios('kind',[['team','Aufgabe der Person'],['mine','Mein To-do'],['waiting','Wartet auf']],last.kind||c.kind))}</div>`
       +`<div class="due-g cap-date">${group('Fällig',radios('due',dueChoices(),last.dueDate?null:last.due||''))+field('Anderes Datum',dateIn('dueDate',last.dueDate||''))}</div>`
+      +`<div class="imp-g">${impGroup(!!last.important)}</div>`
       +'<p class="qprev" id="capPrev" aria-live="polite"></p>',
     onSubmit:v=>{const r=parseQuick(v.title||'',{personId:v.pid||'me',kind:v.kind||'team'});if(r.ambiguous)return ambiguousText(r);if(r.err)return r.err;
       if(r.type==='absence'){capSheet.text='';capSheet.absence=null;openCapture('absence','',{personId:r.personId,kind:r.absKind,start:r.start,end:r.end,note:r.note,half:r.half});capSheet.text='';return KEEP_OPEN}
       if(!r.title)return'Bitte gib einen Titel ein.';
-      if(r.type==='topic'){capSheet.topic=null;openCapture('topic',r.title,{personId:r.personId,start:r.start,end:r.end,with:withText(r),
+      if(r.type==='topic'){capSheet.topic=null;openCapture('topic',r.title,{personId:r.personId,start:r.start,end:r.end,with:withText(r),important:r.important||!!v.important,
         status:r.start<=TODAY&&r.end>=TODAY?'aktiv':'geplant'});return KEEP_OPEN}
-      const n=newTodo({...r,due:r.due||v.dueDate||v.due||null});save();
+      const n=newTodo({...r,due:r.due||v.dueDate||v.due||null,important:r.important||!!v.important});save();
       toast(`${kindLabel(n.kind,personOf(n.personId))} angelegt`,true)}});
   capPreview();
 }
@@ -97,6 +99,7 @@ function capPreview(){
     el.innerHTML=r.err?`<span class="warn">${esc(r.err)}</span>`:absPreview({personId:r.personId,absKind:r.kind,start:r.start,end:r.end,half:r.half});return}
   const r=parseQuick(v.title||'',{personId:v.pid||'me',kind:v.kind||'team'}),due=r.due||v.dueDate||v.due||(r.repeat?TODAY:null);
   f.dataset.me=r.personId==='me'?'1':'0';f.dataset.abs=r.type==='todo'?'0':'1'; // absence or topic: no kind, no due date
+  f.dataset.away=r.type==='absence'?'1':'0'; // absence: no "Wichtig" either; a topic takes it along
   const sb=f.querySelector('button[type=submit]');if(sb)sb.textContent=r.type==='todo'?'Aufgabe anlegen':'Weiter';
   const unk=r.unknown?`<span class="warn">${esc(unknownText(r.unknown))}</span>`:'';
   if(r.ambiguous){el.innerHTML=`<span class="warn">${esc(ambiguousText(r))}</span>`;return}

@@ -57,14 +57,14 @@ const todoNote=t=>t.kind==='mine'?' (mein To-do)':t.kind==='waiting'?' (wartet)'
 function chipHTML(t,c,top){
   const late=!!t.due&&t.due<TODAY;
   return`<div class="tchip k-${t.kind}${late?' late':''}" data-todo="${t.id}" data-day="${c.d}" data-person="${t.personId}" data-ids="${t.id}" tabindex="0" role="button"
-    style="left:${c.x+5}px;top:${top}px;width:${c.w-10}px" aria-label="${esc(t.title)}${todoNote(t)}${!t.due?', Ohne Frist':late?`, überfällig seit ${dueLabel(t.due)}`:''}"><button class="mini-check" data-action="toggle" data-id="${t.id}" aria-label="Als erledigt markieren">${ic('check',10,3)}</button><span>${esc(t.title)}</span>${late?ic('alert',14):''}</div>`;
+    style="left:${c.x+5}px;top:${top}px;width:${c.w-10}px" aria-label="${esc(t.title)}${todoNote(t)}${t.important?', wichtig':''}${!t.due?', Ohne Frist':late?`, überfällig seit ${dueLabel(t.due)}`:''}"><button class="mini-check" data-action="toggle" data-id="${t.id}" aria-label="Als erledigt markieren">${ic('check',10,3)}</button>${t.important?impMark(12,false):''}<span>${esc(t.title)}</span>${late?ic('alert',14):''}</div>`;
 }
 /* Marker for the todos of one person on one day in a narrow column. One todo: drag and click like a card. Several: the number,
    a click pins the hover card with the list. Its look follows the most urgent todo: overdue, then mine, team, waiting. */
 const MARK=24;
 function markHTML(list,c,top,pid){
   const late=list.some(t=>t.due&&t.due<TODAY),k=['mine','team','waiting'].find(k=>list.some(t=>t.kind===k))||'team',n=list.length,size=Math.min(MARK,c.w-6);
-  const label=n===1?`${list[0].title}${todoNote(list[0])}${!list[0].due?', Ohne Frist':late?`, überfällig seit ${dueLabel(list[0].due)}`:''}`:`${n} Aufgaben am ${dmN(c.d)}${late?', davon überfällig':''}`;
+  const label=n===1?`${list[0].title}${todoNote(list[0])}${list[0].important?', wichtig':''}${!list[0].due?', Ohne Frist':late?`, überfällig seit ${dueLabel(list[0].due)}`:''}`:`${n} Aufgaben am ${dmN(c.d)}${late?', davon überfällig':''}`;
   return`<div class="tmark k-${k}${late?' late':''}${n>1?' multi':''}" ${n===1?`data-todo="${list[0].id}" `:''}data-day="${c.d}" data-person="${pid}" data-ids="${list.map(t=>t.id).join(' ')}" tabindex="0" role="button"
     aria-label="${esc(label)}" style="left:${c.x+(c.w-size)/2}px;top:${top}px;width:${size}px;height:${size}px">${n>1?`<b>${n}</b>`:late?ic('bang',Math.min(14,size-6),3):''}</div>`;
 }
@@ -75,10 +75,10 @@ function toneMap(){const m={},by={};
   for(const k in by)by[k].sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end)||a.id.localeCompare(b.id)).forEach((t,i)=>m[t.id]=i%3);
   return m}
 function barHTML(t,l,tone=0){
-  const x=pos(t.start,t.end),late=topicLate(t),ov=topicWarn(t);
+  const x=pos(t.start,t.end),late=topicLate(t),ov=topicWarn(t),imp=t.important&&t.status!=='erledigt';
   const note=late?' Ende überschritten.':ov?` ${ov.risk[0].toUpperCase()+ov.risk.slice(1)}.`:'';
   return`<div class="bar ${t.status} tone-${tone}" data-id="${t.id}" tabindex="0" role="button" style="left:${x.l}px;width:${x.w}px;top:${10+l*LANE}px"
-    title="${esc(t.title)}: ${dm(t.start)} bis ${dm(t.end)}.${withOf(t).length?` Mit ${esc(withNames(t))}.`:''}${note}"><span class="h h-l"></span>${late?`<span class="flag late">${ic('alert',14,2.5)}</span>`:ov?`<span class="flag warn">${ic('alert',14,2.5)}</span>`:''}<span class="bar-t">${esc(t.title)}</span><span class="h h-r"></span></div>`;
+    title="${esc(t.title)}: ${dm(t.start)} bis ${dm(t.end)}.${imp?' Wichtig.':''}${withOf(t).length?` Mit ${esc(withNames(t))}.`:''}${note}"><span class="h h-l"></span>${imp?`<span class="flag imp">${ic('flag',12,2.5)}</span>`:''}${late?`<span class="flag late">${ic('alert',14,2.5)}</span>`:ov?`<span class="flag warn">${ic('alert',14,2.5)}</span>`:''}<span class="bar-t">${esc(t.title)}</span><span class="h h-r"></span></div>`;
 }
 /* Topics of others in which a person is involved (`with`). They show in a thin lane below the person's own bars: neutral,
    dashed, with the responsible person's name. Not draggable; a click opens the topic. The phone strip uses the same list. */
@@ -92,7 +92,7 @@ function placeLanes(list){const lanes=[];
 const ownerName=t=>{const o=personOf(t.personId);return o.id==='me'?'Ich':firstName(o)};
 function wbarHTML(t,top){const x=pos(t.start,t.end),who=ownerName(t);
   return`<button class="wbar ${t.status}" data-action="edit-topic" data-id="${t.id}" style="left:${x.l}px;width:${x.w}px;top:${top}px"
-    title="Beteiligt an ${esc(t.title)}, verantwortlich: ${esc(who)}, ${TOPIC_ST[t.status]}, ${dm(t.start)} bis ${dm(t.end)}">${ic('users',13)}<span>${esc(who)}: ${esc(t.title)}</span></button>`}
+    title="Beteiligt an ${esc(t.title)}, verantwortlich: ${esc(who)}, ${TOPIC_ST[t.status]}, ${dm(t.start)} bis ${dm(t.end)}${t.important&&t.status!=='erledigt'?', wichtig':''}">${ic('users',13)}${t.important&&t.status!=='erledigt'?impMark(12,false):''}<span>${esc(who)}: ${esc(t.title)}</span></button>`}
 function timeline(ids){
   layout();hidePop();
   const bg=T.cols.map((c,i)=>{const w=wdOf(c.d),cl=['col'];if(i===0)cl.push('first');if(T.fine)cl.push('dl');if(w===1&&!T.week)cl.push('wk');
@@ -121,7 +121,7 @@ function timeline(ids){
 }
 function tlSection(ids){
   const r=rangeWeeks(),fine=r<=2;
-  const legend=`<span><i class="sw aktiv"></i>Aktiv</span><span><i class="sw geplant"></i>Geplant</span><span><i class="sw erledigt"></i>Erledigt</span><span><i class="sw off"></i>Abwesend</span><span><i class="sw mine"></i>Mein To-do</span><span><i class="sw with"></i>Beteiligt</span>`;
+  const legend=`<span><i class="sw aktiv"></i>Aktiv</span><span><i class="sw geplant"></i>Geplant</span><span><i class="sw erledigt"></i>Erledigt</span><span><i class="sw off"></i>Abwesend</span><span><i class="sw mine"></i>Mein To-do</span><span><i class="sw with"></i>Beteiligt</span><span class="lg-imp">${ic('flag',14,2.5)}Wichtig</span>`;
   const btn=(v,l)=>`<button class="tag" data-action="range" data-v="${v}" aria-pressed="${ui.range===v}">${l}</button>`;
   return`<section class="card tl-card" data-tour="timeline"><div class="tl-top">
     <div class="sec-head"><div class="tags" role="group" aria-label="Zeitraum">${btn('week','Woche')}${btn('two','2 Wochen')}${btn('six','6 Wochen')}</div>
@@ -141,8 +141,8 @@ let pop=null; // {el, mark, pinned, timer}
 function popHTML(mark){
   const d=+mark.dataset.day,ids=mark.dataset.ids.split(' '),list=S.todos.filter(t=>ids.includes(t.id)).sort(byDue),p=personOf(mark.dataset.person);
   const items=list.map(t=>{const late=!!t.due&&t.due<TODAY;
-    return`<li><button type="button" class="tp-i k-${t.kind}${late?' late':''}" data-action="edit-todo" data-id="${t.id}"><span class="tp-dot"></span><span class="tp-t"><b>${esc(t.title)}</b>
-      <small>${esc(kindLabel(t.kind,p))}${withOf(t).length?`, mit ${esc(withNames(t))}`:''}${t.repeat?`, ${esc(repeatLabel(t.repeat).toLowerCase())}`:''}, ${!t.due?'Ohne Frist':late?`überfällig seit ${esc(dueLabel(t.due))}`:`fällig ${esc(dueLabel(t.due))}`}</small>${t.note?`<span class="tp-n">${esc(t.note)}</span>`:''}</span></button></li>`}).join('');
+    return`<li><button type="button" class="tp-i k-${t.kind}${late?' late':''}" data-action="edit-todo" data-id="${t.id}"><span class="tp-dot"></span><span class="tp-t"><b>${t.important?impMark(12,false):''}${esc(t.title)}</b>
+      <small>${t.important?'Wichtig, ':''}${esc(kindLabel(t.kind,p))}${withOf(t).length?`, mit ${esc(withNames(t))}`:''}${t.repeat?`, ${esc(repeatLabel(t.repeat).toLowerCase())}`:''}, ${!t.due?'Ohne Frist':late?`überfällig seit ${esc(dueLabel(t.due))}`:`fällig ${esc(dueLabel(t.due))}`}</small>${t.note?`<span class="tp-n">${esc(t.note)}</span>`:''}</span></button></li>`}).join('');
   return`<div class="tp-head"><b>${esc(d===TDN?'Heute':longDay(ds(d)))}</b><span>${list.length===1?'1 Aufgabe':`${list.length} Aufgaben`}</span></div><ul>${items}</ul>`;
 }
 function showPop(mark,pinned=false){

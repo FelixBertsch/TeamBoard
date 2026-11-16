@@ -3,7 +3,7 @@
    Sick days and other absences are left out on purpose: the board keeps no sick-day history (see expireSick()).
    Also the yearly review panel on person pages (reviewPanel()). */
 const HIST_TYPES=[['alle','Alle'],['todo','Aufgaben'],['topic','Themen'],['talk','Gespräche'],['absence','Urlaub und Schulung'],['project','Projekte']];
-const HIST_ICONS={todo:'check',talk:'message',topic:'flag',absence:'calendar',project:'briefcase'};
+const HIST_ICONS={todo:'check',talk:'message',topic:'gantt',absence:'calendar',project:'briefcase'};
 
 function historyEvents(){
   const ev=[],kindSub={mine:'Mein To-do',waiting:'Wartet auf'};

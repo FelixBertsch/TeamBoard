@@ -62,8 +62,8 @@ function gridRows(mon,n,sel,people){
     const inv=placeLanes(involvedTopics(p.id,mon,last).filter(t=>colStart(dn(t.start),mon)<=colEnd(dn(t.end),mon)));
     const abs=S.absences.filter(a=>a.personId===p.id&&dn(a.end)>=mon&&dn(a.start)<=last).map(a=>{const s=Math.max(colStart(dn(a.start),mon),0),e=Math.min(colEnd(dn(a.end),mon),n-1);
       return s>e?'':`<span class="wg-a${a.half?' half':''}" style="left:${gx(s+(a.half==='pm'?0.5:0))};width:${gx(a.half?0.5:e-s+1)}"${a.half?` title="${esc(absLabel(a.kind))} ${HALF[a.half]}"`:''}><span>${esc(absLabel(a.kind))}</span></span>`}).join('');
-    let bars=own.placed.map(({t,l})=>gridBar(t,mon,n,6+l*30,`${t.status} tone-${tones[t.id]}`,`<span>${esc(t.title)}</span>`,`${t.title}, ${dm(t.start)} bis ${dm(t.end)}. Gedrückt halten zum Verschieben.`)).join('');
-    bars+=inv.placed.map(({t,l})=>gridBar(t,mon,n,6+own.n*30+l*26,`inv${t.status==='erledigt'?' inv-done':''}`,`${ic('users',12)}<span>${esc(ownerName(t))}: ${esc(t.title)}</span>`,`Beteiligt an ${t.title}, verantwortlich: ${ownerName(t)}`)).join('');
+    let bars=own.placed.map(({t,l})=>gridBar(t,mon,n,6+l*30,`${t.status} tone-${tones[t.id]}`,`${t.important&&t.status!=='erledigt'?`<i class="flag imp">${ic('flag',12,2.5)}</i>`:''}<span>${esc(t.title)}</span>`,`${t.title}, ${dm(t.start)} bis ${dm(t.end)}${t.important&&t.status!=='erledigt'?', wichtig':''}. Gedrückt halten zum Verschieben.`)).join('');
+    bars+=inv.placed.map(({t,l})=>gridBar(t,mon,n,6+own.n*30+l*26,`inv${t.status==='erledigt'?' inv-done':''}`,`${ic('users',12)}${t.important&&t.status!=='erledigt'?impMark(11,false):''}<span>${esc(ownerName(t))}: ${esc(t.title)}</span>`,`Beteiligt an ${t.title}, verantwortlich: ${ownerName(t)}${t.important&&t.status!=='erledigt'?', wichtig':''}`)).join('');
     const h=Math.max(44,12+own.n*30+inv.n*26+(abs?16:0)),name=p.id==='me'?'Meine Planung':p.name;
     return`<div class="wg-r"><a class="wg-who" href="${hrefOf(p.id)}" aria-label="${esc(name)}" title="${esc(name)}">${avatar(p,'sm')}</a><div class="wg-t" style="height:${h}px">${cols}${abs}${bars}${own.n+inv.n?'':'<span class="wg-free">kein Thema</span>'}</div></div>`}).join('');
 }
@@ -84,15 +84,17 @@ function viewTeam(banner=''){
   ${team().length?'':'<p class="empty">Noch kein Teammitglied angelegt. Leg die erste Person hier an.</p>'}
   <button class="btn secondary" data-action="new-person" style="justify-self:start;margin-top:16px">${ic('userPlus',18)}Person hinzufügen</button>`;
 }
+/* Topics running on the listed day: important ones first (they run on that day, so they count as current there). */
+const dayTopics=(a,b)=>!!(b.important&&b.status!=='erledigt')-!!(a.important&&a.status!=='erledigt')||byStart(a,b);
 /* The selected day in words: per person project, topics with their end, involvement, absence, todos due. Absent people last. */
 function dayList(d,people){
   const day=ds(d),open=S.todos.filter(t=>!t.done),tones=toneMap();
   const row=p=>{const a=absentOn(p.id,day),proj=p.id==='me'?'Meine Planung':projectLabel(p.id,currentAssignments(p.id,day))||'Ohne Projekt';
-    const own=S.topics.filter(t=>t.personId===p.id&&t.start<=day&&t.end>=day).sort(byStart),inv=S.topics.filter(t=>withOf(t).includes(p.id)&&t.start<=day&&t.end>=day).sort(byStart);
+    const own=S.topics.filter(t=>t.personId===p.id&&t.start<=day&&t.end>=day).sort(dayTopics),inv=S.topics.filter(t=>withOf(t).includes(p.id)&&t.start<=day&&t.end>=day).sort(dayTopics);
     const tasks=open.filter(t=>t.personId===p.id&&(t.due===day||(d===TDN&&(!t.due||t.due<TODAY)))).sort(byDue);
     const due=tasks.filter(t=>t.due===day).length,late=d===TDN?tasks.filter(t=>t.due&&t.due<TODAY).length:0,undated=tasks.filter(t=>!t.due).length;
-    const chip=t=>`<button type="button" class="dt ${t.status} tone-${tones[t.id]}" data-action="edit-topic" data-id="${t.id}"><span class="dt-t">${esc(t.title)}</span><small>${t.status==='geplant'?'geplant, ':t.status==='erledigt'?'erledigt, ':''}bis ${esc(WD[wdOf(dn(t.end))]+' '+dm(t.end))}</small></button>`;
-    const ichip=t=>`<button type="button" class="dt inv" data-action="edit-topic" data-id="${t.id}">${ic('users',14)}<span class="dt-t">mit ${esc(ownerName(t))}: ${esc(t.title)}</span></button>`;
+    const chip=t=>`<button type="button" class="dt ${t.status} tone-${tones[t.id]}" data-action="edit-topic" data-id="${t.id}"><span class="dt-t">${topicMark(t)}${esc(t.title)}</span><small>${t.status==='geplant'?'geplant, ':t.status==='erledigt'?'erledigt, ':''}bis ${esc(WD[wdOf(dn(t.end))]+' '+dm(t.end))}</small></button>`;
+    const ichip=t=>`<button type="button" class="dt inv" data-action="edit-topic" data-id="${t.id}">${ic('users',14)}<span class="dt-t">${topicMark(t)}mit ${esc(ownerName(t))}: ${esc(t.title)}</span></button>`;
     const meta=(a?`<span class="badge away">${esc(absLabel(a.kind))} ${a.half?HALF[a.half]:'bis '+esc(WD[wdOf(dn(a.end))]+' '+dm(a.end))}</span>`:'')
       +(due?`<span class="dd-due">${due===1?'eine Aufgabe fällig':due+' Aufgaben fällig'}</span>`:'')+(undated?`<span class="dd-due">${undated} ohne Frist</span>`:'')+(late?`<span class="badge late">${ic('alert',12,2.5)}${late} überfällig</span>`:'');
     return{a,html:`<div class="dd${a&&!a.half?' off':''}"><a class="dd-who" href="${hrefOf(p.id)}">${avatar(p,'sm')}<span class="dd-nm"><b>${esc(p.id==='me'?'Ich':p.name)}</b><small>${esc(proj)}</small></span>${ic('chevR',18)}</a>

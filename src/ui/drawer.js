@@ -30,6 +30,10 @@ function parseWith(text,t){
   for(;;){const mm=s.slice(i).match(/\s@(?=[^\s@#])/);if(!mm)break;const st=i+mm.index+2,m=matchPerson(s.slice(st),pool);
     if(m.ambiguous)return{err:ambiguousText(m)};if(!m.id)return{err:unknownText(m.unknown)};if(!ids.includes(m.id))ids.push(m.id);i=st+m.len}
   return{ids}}
+/* "Priorität": one chip "Wichtig" (checkbox), in the forms and the phone sheet. */
+const impGroup=(on,note='')=>group('Priorität',`<div class="tags imp-tag"><label><input type="checkbox" name="important" value="1"${on?' checked':''}><span>${ic('flag',16,2.5)}Wichtig</span></label></div>`)
+  +(note?`<p class="d-note">${note}</p>`:'');
+function setImp(o,on){if(on)o.important=true;else delete o.important}
 function setWith(o,ids){const w=ids.filter(id=>id!==o.personId);if(w.length)o.with=w;else delete o.with}
 function openDrawer(cfg){drawerCfg=cfg;const wasOpen=document.body.classList.contains('drawer-open');if(!wasOpen)lastFocus=document.activeElement;
   $('#drawer').classList.toggle('cap',!!cfg.capture);
@@ -55,12 +59,13 @@ function openTopic(id,preset={}){
       +group('Status',radios('status',[['geplant','Geplant'],['aktiv','Aktiv'],['erledigt','Erledigt']],t.status))
       +group('Fokus',radios('focus',[['main','Hauptthema'],['side','Nebenthema']],t.side?'side':'main'))
       +'<p class="d-note side-note">Bei Nebenthemen meldet „Zu klären“ keine Abwesenheiten.</p>'
+      +impGroup(t.important,'Steht in den Listen oben, sobald das Thema begonnen hat.')
       +`<div class="topic-done">${field('Erledigt am',dateIn('doneAt',t.doneAt||(t.status==='erledigt'?'':TODAY)))}</div>`
       +field('Notiz',`<textarea name="note" rows="4" placeholder="Kontext, Abhängigkeiten, Ansprechpartner">${esc(t.note)}</textarea>`),
     onSubmit:v=>{let{title,personId,start,end,status,note}=v;title=(title||'').trim();if(!title)return'Bitte gib einen Titel ein.';if(!start||!end)return'Bitte setze Start und Ende.';if(end<start)[start,end]=[end,start];
       const w=parseWith(v.with,ex);if(w.err)return w.err;
       const was=ex?.status==='erledigt',doneAt=status!=='erledigt'?null:v.doneAt||(was?ex.doneAt:TODAY);
-      const o=ex||newEntry({});Object.assign(o,{title,personId,start,end,status,note});setWith(o,w.ids);if(v.focus==='side')o.side=true;else delete o.side;if(doneAt)o.doneAt=doneAt;else delete o.doneAt;
+      const o=ex||newEntry({});Object.assign(o,{title,personId,start,end,status,note});setWith(o,w.ids);setImp(o,v.important);if(v.focus==='side')o.side=true;else delete o.side;if(doneAt)o.doneAt=doneAt;else delete o.doneAt;
       if(!ex)S.topics.push(o);save();toast(ex?'Thema gespeichert':'Thema angelegt',true)},
     onDelete:ex?()=>{S.topics=S.topics.filter(x=>x.id!==id);save();toast('Thema gelöscht',true)}:null});
 }
@@ -119,6 +124,7 @@ function openTodo(id,preset={}){
       +`<div class="kind-g">${group('Art',radios('kind',[['team','Aufgabe der Person'],['mine','Mein To-do'],['waiting','Wartet auf']],t.personId==='me'?'team':t.kind))}</div>`
       +withField(t)
       +field('Fällig',dateIn('due',t.due))
+      +impGroup(t.important,'Steht in den Listen oben, sobald die Aufgabe fällig ist. Ohne Frist gleich.')
       +group('Wiederholen',radios('repeat',REPEATS,t.repeat||''))
       +'<p class="d-note rep-note">Hakst du die Aufgabe ab, legt das Teamboard die nächste an. Fällt ein Termin auf ein Wochenende oder einen Feiertag, rückt er auf den Arbeitstag davor.</p>'
       +field('Notiz',`<textarea name="note" rows="4">${esc(t.note)}</textarea>`)
@@ -127,8 +133,8 @@ function openTodo(id,preset={}){
       const w=parseWith(v.with,ex);if(w.err)return w.err;
       const repeat=v.repeat||'',due=v.due||null;if(repeat&&!due)return'Für eine Wiederholung braucht die Aufgabe eine Frist.';
       const kind=v.personId==='me'?'team':v.kind;
-      if(!ex){const n=newTodo({title,personId:v.personId,kind,due,note:v.note||'',with:w.ids,repeat});save();toast(`${kindLabel(n.kind,personOf(n.personId))} angelegt`,true);return}
-      const was=ex.done;Object.assign(ex,{title,personId:v.personId,kind,due,note:v.note||''});setWith(ex,w.ids);
+      if(!ex){const n=newTodo({title,personId:v.personId,kind,due,note:v.note||'',with:w.ids,repeat,important:!!v.important});save();toast(`${kindLabel(n.kind,personOf(n.personId))} angelegt`,true);return}
+      const was=ex.done;Object.assign(ex,{title,personId:v.personId,kind,due,note:v.note||''});setWith(ex,w.ids);setImp(ex,v.important);
       if(!repeat){delete ex.repeat;delete ex.anchor}
       else if(repeat!==ex.repeat){Object.assign(ex,{repeat,series:ex.series||uid(),anchor:due})} // a new rhythm starts at this due date
       let next=null;

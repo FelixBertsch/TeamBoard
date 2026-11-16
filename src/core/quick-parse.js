@@ -69,8 +69,8 @@ function parseMentions(t,personId){
 function parseQuick(raw,c){
   let t=' '+raw+' ',personId=c.personId,kind=c.kind,due=null,absKind=null,mixed=false,repeat='';
   const pm=parseMentions(t,personId),unknown=pm.unknown,ambiguous=pm.ambiguous;t=pm.t;personId=pm.personId;
-  let m,half=null,topic=false;const tag=/\s#(ich|meins|wartet|urlaub|krank|schulung|abwesend|vormittags|nachmittags|thema)(?=\s)/i;
-  while((m=t.match(tag))){const w=m[1].toLowerCase();if(w==='thema')topic=true;else if(ABS_TAGS[w])absKind=ABS_TAGS[w];else if(w==='vormittags'||w==='nachmittags')half=w[0]==='v'?'am':'pm';else{kind=TODO_TAGS[w];mixed=true}t=t.replace(m[0],' ')}
+  let m,half=null,topic=false,important=false;const tag=/\s#(ich|meins|wartet|urlaub|krank|schulung|abwesend|vormittags|nachmittags|thema|wichtig)(?=\s)/i;
+  while((m=t.match(tag))){const w=m[1].toLowerCase();if(w==='wichtig')important=true;else if(w==='thema')topic=true;else if(ABS_TAGS[w])absKind=ABS_TAGS[w];else if(w==='vormittags'||w==='nachmittags')half=w[0]==='v'?'am':'pm';else{kind=TODO_TAGS[w];mixed=true}t=t.replace(m[0],' ')}
   t=t.replace(/\s#([^\s@#]+)(?=\s)/g,(all,w)=>{const r=REPEAT_TAGS[fold(w)];if(!r)return all;repeat=r;return' '});
   let bis=null;const b=takeDate(t,'bis');if(b){bis=b.date;t=b.t}
   if(absKind){
@@ -79,26 +79,27 @@ function parseQuick(raw,c){
     start=start||TODAY;let end=bis||start;if(end<start)[start,end]=[end,start];
     let note=t.replace(/\s+/g,' ').trim(),dropped=false;
     if(absKind==='Krank'&&note){dropped=true;note=''} // no further details on sick days
-    return{type:'absence',personId,absKind,start,end,note,dropped,mixed,unknown,ambiguous,title:'',half,...(topic?{err:TOPIC_ABS}:half&&start!==end?{err:HALF_ONE_DAY}:{})};
+    return{type:'absence',personId,absKind,start,end,note,dropped,mixed,unknown,ambiguous,title:'',half,...(topic?{err:TOPIC_ABS}:important?{err:IMP_ABS}:half&&start!==end?{err:HALF_ONE_DAY}:{})};
   }
   if(topic){ // like a todo's due date: a lone date word would eat titles such as "Release 4.2", so "am/ab/vom" or heute/morgen
     const a=takeDate(t,'ab|vom|von|am')||takeLoneDay(t);if(a)t=a.t;let start=a?.date||TODAY,end=bis||start;if(end<start)[start,end]=[end,start];
-    return{type:'topic',title:t.replace(/\s+/g,' ').trim(),personId,start,end,with:pm.with,mixed,unknown,ambiguous,...(repeat?{err:TOPIC_REPEAT}:half?{err:HALF_NO_ABS}:{})};
+    return{type:'topic',title:t.replace(/\s+/g,' ').trim(),personId,start,end,with:pm.with,important,mixed,unknown,ambiguous,...(repeat?{err:TOPIC_REPEAT}:half?{err:HALF_NO_ABS}:{})};
   }
   due=bis;
   if(!due){const x=takeDate(t,'am|zum')||takeLoneDay(t);if(x){due=x.date;t=x.t}} // without a date a repeating todo starts today (newTodo)
   if(personId==='me')kind='team';
-  return{type:'todo',title:t.replace(/\s+/g,' ').trim(),personId,kind,due,with:pm.with,repeat,unknown,ambiguous,...(half?{err:HALF_NO_ABS}:{})};
+  return{type:'todo',title:t.replace(/\s+/g,' ').trim(),personId,kind,due,with:pm.with,repeat,important,unknown,ambiguous,...(half?{err:HALF_NO_ABS}:{})};
 }
 /* #vormittags/#nachmittags: only with an absence tag and for a single day; otherwise `err` and nothing is created. */
 const HALF_ONE_DAY='Halbe Tage gibt es nur für einen einzelnen Tag.';
 const HALF_NO_ABS='#vormittags und #nachmittags gehen nur zusammen mit #urlaub, #krank, #schulung oder #abwesend.';
 const TOPIC_ABS='#thema geht nicht zusammen mit einer Abwesenheit.';
+const IMP_ABS='#wichtig gilt nur für Aufgaben und Themen.';
 const TOPIC_REPEAT='Themen wiederholen sich nicht. Für eine wiederkehrende Aufgabe lass #thema weg.';
 const unknownText=n=>`„${n}“ gibt es weder im Team noch bei den Kontakten. Die Vorschlagsliste legt einen Kontakt an.`;
 /* Preview line of a todo: kind, due date, repetition, involved people. Shared by quick capture and the phone sheet. */
 function todoPreview(r,due){const p=personOf(r.personId),w=withNames(r);
-  return`<span><b>${esc(kindLabel(r.kind,p))}</b>${due?`, fällig ${esc(longDay(due))}`:', ohne Frist'}${r.repeat?`, ${esc(repeatLabel(r.repeat).toLowerCase())}`:''}${w?`, mit ${esc(w)}`:''}</span>`}
+  return`<span><b>${esc(kindLabel(r.kind,p))}</b>${r.important?', wichtig':''}${due?`, fällig ${esc(longDay(due))}`:', ohne Frist'}${r.repeat?`, ${esc(repeatLabel(r.repeat).toLowerCase())}`:''}${w?`, mit ${esc(w)}`:''}</span>`}
 const ambiguousText=r=>`Mehrere passen: ${r.ambiguous.map(p=>p.name).join(', ')}. Wähl eine Person aus der Liste.`;
 const rangeText=(s,e)=>s===e?dueLabel(s):`${dueLabel(s)} bis ${dueLabel(e)}`;
 const daysText=n=>n===0.5?'ein halber Arbeitstag':n===1?'1 Arbeitstag':`${String(n).replace('.',',')} Arbeitstage`;
@@ -113,10 +114,10 @@ function absPreview(r){
 }
 /* Preview line of a topic from quick capture: responsible person, day or range, involved people. */
 function topicPreview(r){const p=personOf(r.personId),w=withNames(r);
-  return`<span><b>Thema: ${esc(p.id==='me'?'Ich':p.name)}</b>, ${esc(rangeText(r.start,r.end))}${r.start===r.end?', ein Tag':''}${w?`, mit ${esc(w)}`:''}</span>`
+  return`<span><b>Thema: ${esc(p.id==='me'?'Ich':p.name)}</b>${r.important?', wichtig':''}, ${esc(rangeText(r.start,r.end))}${r.start===r.end?', ein Tag':''}${w?`, mit ${esc(w)}`:''}</span>`
     +(r.mixed?'<span>#ich und #wartet gelten nur für Aufgaben.</span>':'')}
 function previewHTML(raw){
-  if(!raw.trim())return`<span>@Name weist zu, weitere @Namen sind beteiligt, „am 12.11.“ oder „bis Fr“ setzt die Frist, #ich macht daraus dein To-do, #wartet ein Nachfassen, #monatlich eine Wiederholung, #urlaub eine Abwesenheit, #thema ein Thema.</span>`;
+  if(!raw.trim())return`<span>@Name weist zu, weitere @Namen sind beteiligt, „am 12.11.“ oder „bis Fr“ setzt die Frist, #ich macht daraus dein To-do, #wartet ein Nachfassen, #monatlich eine Wiederholung, #wichtig hebt hervor, #urlaub eine Abwesenheit, #thema ein Thema.</span>`;
   const r=parseQuick(raw,ctx());
   if(r.ambiguous)return`<span class="warn">${esc(ambiguousText(r))}</span>`;
   if(r.err)return`<span class="warn">${esc(r.err)}</span>`;
@@ -130,7 +131,7 @@ function previewHTML(raw){
 }
 /* Creates the topic parsed from quick capture, active if it runs today. Returns the toast text. */
 function addTopic(r){const o=newEntry({personId:r.personId,title:r.title,start:r.start,end:r.end,status:r.start<=TODAY&&r.end>=TODAY?'aktiv':'geplant',note:''});
-  setWith(o,r.with||[]);S.topics.push(o);save();return`Thema angelegt: ${rangeText(r.start,r.end)}`}
+  if(r.important)o.important=true;setWith(o,r.with||[]);S.topics.push(o);save();return`Thema angelegt: ${rangeText(r.start,r.end)}`}
 /* Creates the absence parsed from quick capture. Returns the toast text. */
 function addAbsence(r){
   S.absences.push(newEntry({personId:r.personId,kind:r.absKind,start:r.start,end:r.end,...(r.half&&r.start===r.end?{half:r.half}:{}),...(r.note?{note:r.note}:{})}));save();

@@ -11,7 +11,7 @@ function demo(){
   const tp=(personId,title,s,e,status,note='')=>({id:uid(),personId,title,start:d(s),end:d(e),status,note});
   const topics=[tp('me','Budget 2027 abstimmen',-14,-3,'erledigt'),tp('me','Quartalsplanung Q1',-7,11,'aktiv'),
     tp('me','Recruiting Senior Backend',7,32,'geplant'),
-    {...tp('lena','Payment-API v2',-14,11,'aktiv','Go-live mit Partnerbank geplant, Lasttests durch Mira vorher.'),with:['mira']},
+    {...tp('lena','Payment-API v2',-14,11,'aktiv','Go-live mit Partnerbank geplant, Lasttests durch Mira vorher.'),with:['mira'],important:true},
     tp('lena','Migration auf PostgreSQL 17',14,39,'geplant'),tp('jonas','Redesign Kundenportal',-7,4,'aktiv'),
     tp('jonas','Barrierefreiheit Formulare',10,30,'geplant'),tp('aylin','Kubernetes-Upgrade Produktion',-3,9,'aktiv'),
     tp('aylin','Monitoring mit Grafana',14,30,'geplant'),tp('tobias','Rechnungsexport DATEV',-10,2,'aktiv'),
@@ -24,7 +24,7 @@ function demo(){
   const dd=(personId,kind,title,due,doneAgo)=>({...td(personId,kind,title,due,true),doneAt:ds(TDN-doneAgo)}); // completed todo
   const todos=[
     td('me','team','Bewerbungen sichten',0),td('me','team','Reporting an die Geschäftsführung',4),
-    td('me','team','Zielvereinbarungen 2027 entwerfen',7),td('me','team','Teamevent im Dezember planen',null),
+    td('me','team','Zielvereinbarungen 2027 entwerfen',7),{...td('me','team','Teamevent im Dezember planen',null),important:true},
     td('me','team','1:1 mit Lena',1),td('me','team','Budget-Freigabe Cloud',2),
     td('lena','team','Code-Review Auth-Modul',-1),td('lena','team','API-Doku für Partner aktualisieren',5),
     td('lena','team','Rate-Limiting testen',null),dd('lena','team','Sprint-Review vorbereiten',-3,3),
@@ -148,12 +148,17 @@ const teamLine=p=>[p.id==='me'?'':p.team,projectLabel(p.id)].filter(Boolean).joi
 const projectNames=()=>[...new Set(S.assignments.map(a=>a.project))].sort((a,b)=>a.localeCompare(b,'de'));
 function kindLabel(kind,p){if(p.id==='me')return'Eigene Aufgabe';const f=firstName(p);
   return kind==='mine'?`Mein To-do zu ${f}`:kind==='waiting'?`Wartet auf ${f}`:`Aufgabe von ${f}`}
-const byDue=(a,b)=>(a.due||'9999').localeCompare(b.due||'9999')||a.title.localeCompare(b.title);
+/* "Wichtig" (`important`) only counts while an entry is current: a todo that is overdue, due today or undated, a topic that has
+   started and is not done. Current important entries come first in every list; later ones keep their date order, and a todo
+   due in six weeks moves up only when its day comes. */
+const todoImp=t=>!!t.important&&!t.done&&(!t.due||t.due<=TODAY);
+const topicImp=t=>!!t.important&&t.status!=='erledigt'&&t.start<=TODAY;
+const byDue=(a,b)=>todoImp(b)-todoImp(a)||(a.due||'9999').localeCompare(b.due||'9999')||!!b.important-!!a.important||a.title.localeCompare(b.title);
 
 /* Creates a todo. `kind` is always 'team' for "me" (same rule in parseQuick, openTodo and dragging). */
 function newTodo(o){
   const t=newEntry({personId:o.personId,kind:o.personId==='me'?'team':o.kind||'team',title:o.title,due:o.due||null,done:false,note:o.note||''});
-  const w=[...new Set(o.with||[])].filter(id=>id!==t.personId);if(w.length)t.with=w;
+  const w=[...new Set(o.with||[])].filter(id=>id!==t.personId);if(w.length)t.with=w;if(o.important)t.important=true;
   if(o.repeat){t.due=t.due||TODAY;Object.assign(t,{repeat:o.repeat,series:uid(),anchor:t.due})}
   S.todos.push(t);return t}
 
@@ -170,7 +175,7 @@ function plannedAt(anchor,rep,k){const n=+rep.slice(1);return rep[0]==='w'?ds(dn
 const workdayBefore=n=>{while(wdOf(n)===0||wdOf(n)===6||holidayOn(n))n--;return n};
 function nextDue(t){const after=Math.max(dn(t.due),TDN),a=t.anchor||t.due;
   for(let k=0;k<5000;k++){const d=workdayBefore(dn(plannedAt(a,t.repeat,k)));if(d>after)return ds(d)}return null}
-/* Marks a todo done; for a recurring one also creates the next instance and returns it. */
+/* Marks a todo done; for a recurring one also creates the next instance and returns it. The follow-up does not take over `important`. */
 function completeTodo(t,doneAt=TODAY){
   t.done=true;t.doneAt=doneAt||TODAY;if(!t.repeat||!t.due)return null;
   const due=nextDue(t);if(!due)return null;const id=`${t.series}-${due.replace(/-/g,'')}`;

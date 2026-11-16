@@ -9,12 +9,13 @@ function hideGhost(track){const g=track?.querySelector('.tl-ghost');if(g){g.hidd
 function spanLabel(a,b){const lo=Math.min(a,b),hi=Math.max(a,b),n=hi-lo+1;return lo===hi?`${WD[wdOf(lo)]} ${dmN(lo)}, 1 Tag`:`${dmN(lo)} bis ${dmN(hi)}, ${n} Tage`}
 /* Inline field after drag-to-create. Plain text becomes a topic, as before. A tag turns it into something else for the dragged
    person and range: #urlaub, #krank, #schulung, #abwesend an absence over the range; #ich, #meins, #wartet a todo due on the
-   last dragged day ("bis Fr" overrides). With a tag the text goes through parseQuick(), so "@Name" works there too. */
+   last dragged day ("bis Fr" overrides). With a tag the text goes through parseQuick(), so "@Name" works there too. #wichtig marks the topic or todo. */
 const INLINE_TAG=/(^|\s)#(ich|meins|wartet|urlaub|krank|schulung|abwesend|vormittags|nachmittags|(zwei)?w(ö|o|oe)chentlich|monatlich|quartalsweise|j(ä|a|ae)hrlich)(?=\s|$)/i;
 function inlineParse(raw,pid,lo,hi){
   raw=raw.replace(/(^|\s)#thema(?=\s|$)/gi,' '); // plain text is a topic here anyway
-  if(!INLINE_TAG.test(raw))return{type:'topic',title:raw.trim()};
-  const r=parseQuick(raw,{personId:pid,kind:'team'});
+  const imp=/(^|\s)#wichtig(?=\s|$)/i.test(raw);raw=raw.replace(/(^|\s)#wichtig(?=\s|$)/gi,' ');
+  if(!INLINE_TAG.test(raw))return{type:'topic',title:raw.replace(/\s+/g,' ').trim(),important:imp};
+  const r={...parseQuick(raw,{personId:pid,kind:'team'}),important:imp};
   return r.type==='absence'?{...r,start:ds(lo),end:ds(hi),err:r.half&&lo!==hi?HALF_ONE_DAY:null}:{...r,due:r.due||ds(hi)}}
 function inlineHint(inp){
   const lo=+inp.dataset.lo,hi=+inp.dataset.hi,r=inlineParse(inp.value,inp.dataset.person,lo,hi),span=spanLabel(lo,hi);let s;
@@ -42,7 +43,7 @@ function inlineCreate(track,a,b){
     if(r.type==='absence'){const msg=addAbsence(r);render();toast(msg,true);return}
     if(r.type==='todo'&&r.title){newTodo(r);save();render();
       toast(`${kindLabel(r.kind,personOf(r.personId))} angelegt, fällig ${dueLabel(r.due)}`,true);return}
-    if(r.type==='topic'&&r.title){S.topics.push(newEntry({personId:pid,title:r.title,start:ds(lo),end:ds(hi),status:lo<=TDN&&hi>=TDN?'aktiv':'geplant',note:''}));save();render();
+    if(r.type==='topic'&&r.title){S.topics.push(newEntry({personId:pid,title:r.title,start:ds(lo),end:ds(hi),status:lo<=TDN&&hi>=TDN?'aktiv':'geplant',note:'',...(r.important?{important:true}:{})}));save();render();
       toast(`Thema angelegt: ${dmN(lo)} bis ${dmN(hi)}`,true);return}
     el.remove()};
   inp.addEventListener('keydown',ev=>{if(sug&&sug.input===inp)return; // the open suggestion list takes the keys (events.js)

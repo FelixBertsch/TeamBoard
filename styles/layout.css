@@ -15,7 +15,7 @@ button,a,.tag,.tags label span{touch-action:manipulation}
 .seg{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--surface-sunken);margin-bottom:20px}
 .seg-b{flex:1;min-height:40px;border:0;border-radius:999px;background:none;font-size:14px;font-weight:800;color:var(--text-muted);cursor:pointer;white-space:nowrap;padding:0 8px}
 .seg-b[aria-selected="true"]{background:var(--surface-card);color:var(--text-strong);box-shadow:var(--shadow-sm)}
-#dform[data-me="1"] .kind-g,#dform[data-abs="1"] .kind-g,#dform[data-abs="1"] .due-g{display:none}
+#dform[data-me="1"] .kind-g,#dform[data-abs="1"] .kind-g,#dform[data-abs="1"] .due-g,#dform[data-away="1"] .imp-g{display:none}
 #capPrev{margin:-8px 0 8px}
 .d-top{padding:0 32px}
 .cap-seg{margin-bottom:8px}

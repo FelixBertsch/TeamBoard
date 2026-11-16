@@ -528,10 +528,77 @@ def sync_flows(b):
     check(not (a.errs or p.errs), "no JavaScript errors during sync " + "; ".join(a.errs + p.errs))
     a_ctx.close(); p_ctx.close()
 
+def important_flow(browser):
+    """"Wichtig": current important entries come first, later ones keep their date order; input via #wichtig, form and phone chip."""
+    for phone in [False, True]:
+        name = "imp-phone" if phone else "imp-desktop"
+        pg = browser.new_page(viewport={"width": 393 if phone else 1920, "height": 852 if phone else 1080},
+                              is_mobile=phone, has_touch=phone, locale="de-DE")
+        errs = []
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.clock.install(time="2026-11-09T12:00:00")
+        pg.goto(BASE + "?demo=1&nosw=1#uebersicht"); pg.wait_for_timeout(200)
+        pg.evaluate("""()=>{S.todos=[];S.topics=[];S.absences=[];S.assignments=[];S.talks=[];
+          const add=(id,due,important)=>S.todos.push({id,personId:'lena',due,kind:'team',done:false,title:id,note:'',...(important?{important:true}:{})});
+          add('a-late',ds(TDN-1));add('b-today',TODAY);add('c-undated',null);add('z-imp-undated',null,true);add('y-imp-late',ds(TDN-2),true);
+          add('f-soon',ds(TDN+1));add('g-imp-far',ds(TDN+30),true);add('a-same',ds(TDN+30));
+          const tp=(id,s,e,important)=>S.topics.push({id,personId:'lena',title:id,start:ds(TDN+s),end:ds(TDN+e),status:s<=0?'aktiv':'geplant',note:'',...(important?{important:true}:{})});
+          tp('t-run',-5,5);tp('t-imp-run',-1,8,true);tp('t-imp-later',20,30,true);
+          ui.filter='alle';ui.more=false;ui.grp={};ui.fold.todos=true;render()}""")
+        card = pg.locator('[data-tour=todos]')
+        ids = lambda: card.locator('.todo-title').evaluate_all("es=>es.map(e=>e.dataset.id)")
+        cur = ['y-imp-late', 'z-imp-undated', 'a-late', 'b-today', 'c-undated']
+        check(ids() == cur, f"[{name}] current important todos first, then the usual order; a far important todo stays hidden")
+        check(card.locator('.todo-title[data-id=z-imp-undated] .imp').count() == 1 and card.locator('.todo-title[data-id=a-late] .imp').count() == 0,
+              f"[{name}] flag only on important todos")
+        shot(pg, name, 'overview')
+        pg.locator('[data-action=fold-grp][data-v=later]' if phone else '[data-action=more]').click(); pg.wait_for_timeout(100)
+        check(ids()[len(cur):] == ['f-soon', 'g-imp-far', 'a-same'], f"[{name}] Später stays chronological, important only first within its day")
+        if phone:
+            go(pg, 'team')
+            check(pg.locator('.dday .dt').evaluate_all("es=>es.map(e=>e.dataset.id)") == ['t-imp-run', 't-run'], f"[{name}] day list: important topic first")
+            check(pg.locator('.dday .todo-title').evaluate_all("es=>es.map(e=>e.dataset.id)") == cur, f"[{name}] day list: important todos first")
+            check(pg.locator('.wg-b[data-id=t-imp-run] .flag.imp').count() == 1 and pg.locator('.wg-b[data-id=t-run] .flag').count() == 0,
+                  f"[{name}] team grid bar carries the flag")
+            shot(pg, name, 'team')
+            pg.evaluate("openCapture('todo')"); pg.wait_for_timeout(150)
+            check(pg.locator('#dform .imp-g .imp-tag').is_visible(), f"[{name}] capture sheet offers the Wichtig chip")
+            pg.fill('#capText', '@ich #urlaub '); pg.wait_for_timeout(100)
+            check(not pg.locator('#dform .imp-g').is_visible(), f"[{name}] Wichtig chip hides for an absence")
+            pg.fill('#capText', 'Angebot prüfen'); pg.wait_for_timeout(100)
+            pg.locator('#dform .imp-g label').click(); pg.locator('#dform button[type=submit]').click(); pg.wait_for_timeout(150)
+            check(state(pg, "!!S.todos.find(t=>t.title==='Angebot prüfen')?.important"), f"[{name}] chip in the capture sheet marks the todo")
+        else:
+            pg.click('#quick'); pg.keyboard.type('@ich Bericht abgeben #wichtig'); pg.wait_for_timeout(100); pg.keyboard.press('Enter'); pg.wait_for_timeout(150)
+            check(state(pg, "(t=>!!t&&t.important===true&&t.personId==='me')(S.todos.find(t=>t.title==='Bericht abgeben'))"), f"[{name}] #wichtig in quick capture")
+            r = pg.evaluate("(()=>{const a=parseQuick('@ich #urlaub #wichtig',ctx()),t=parseQuick('@ich Kick-off #thema #wichtig',ctx());return[!!a.err,t.type,t.important,t.title]})()")
+            check(r == [True, 'topic', True, 'Kick-off'], f"[{name}] #wichtig works for topics and is rejected for absences")
+            pg.evaluate("openTodo('b-today')"); pg.wait_for_timeout(120)
+            pg.locator('#dform .imp-tag label').click(); pg.click('#dform button[type=submit]'); pg.wait_for_timeout(120)
+            on = state(pg, "S.todos.find(t=>t.id==='b-today').important===true")
+            pg.evaluate("openTodo('b-today')"); pg.wait_for_timeout(120)
+            pg.locator('#dform .imp-tag label').click(); pg.click('#dform button[type=submit]'); pg.wait_for_timeout(120)
+            check(on and state(pg, "!('important' in S.todos.find(t=>t.id==='b-today'))"), f"[{name}] form sets and removes Wichtig")
+            check(pg.evaluate("(()=>{const t=newTodo({title:'Rep',personId:'me',due:TODAY,repeat:'w1',important:true}),n=completeTodo(t);return!!n&&!n.important})()"),
+                  f"[{name}] follow-up of a recurring todo does not inherit Wichtig")
+            go(pg, 'ma-lena')
+            check(pg.locator('.prow[data-action=edit-topic]').evaluate_all("es=>es.map(e=>e.dataset.id)") == ['t-imp-run', 't-run', 't-imp-later'],
+                  f"[{name}] person page: running important topic first, a later one keeps its place")
+            check(pg.locator('.bar[data-id=t-imp-run] .flag.imp').count() == 1 and pg.locator('.bar[data-id=t-run] .flag').count() == 0,
+                  f"[{name}] topic bar carries the flag in its white circle")
+            chips = pg.locator('.tl .tchip').evaluate_all("es=>es.filter(e=>e.dataset.day===String(TDN)).sort((a,b)=>a.offsetTop-b.offsetTop).map(e=>e.dataset.todo)")
+            check(chips[:2] == ['y-imp-late', 'z-imp-undated'] and pg.locator('.tchip[data-todo=y-imp-late] .imp').count() == 1,
+                  f"[{name}] today's column: important cards on top, with flag")
+            shot(pg, name, 'person')
+        check(overflow(pg) <= 0, f"[{name}] no horizontal overflow")
+        check(not errs, f"[{name}] no JavaScript errors " + "; ".join(errs))
+        pg.close()
+
 with sync_playwright() as p:
     b = p.chromium.launch()
-    todo_display(b)
-    if ONLY == 'todo-display':
+    if ONLY != 'important': todo_display(b)
+    if ONLY != 'todo-display': important_flow(b)
+    if ONLY in ('todo-display', 'important'):
         b.close(); srv.shutdown(); sys.exit(1 if fails else 0)
     pg = b.new_page(viewport={"width": 1536, "height": 1000}, locale="de-DE")
     errors = []

@@ -3,7 +3,7 @@
    only "#" in the inline field of drag-to-create (#tlNew), whose list floats (position fixed) because the timeline clips.
    ARIA combobox: the field keeps focus, ↑/↓ move, Tab and Enter take the marked entry, Esc closes the list.
    The list closes when the token is already complete, so Enter then submits as usual. */
-const TAG_HELP=[['ich','Mein To-do zur Person'],['wartet','Wartet auf die Person'],['urlaub','Abwesenheit: Urlaub'],
+const TAG_HELP=[['ich','Mein To-do zur Person'],['wartet','Wartet auf die Person'],['wichtig','Wichtig: steht oben, sobald es aktuell ist'],['urlaub','Abwesenheit: Urlaub'],
   ['krank','Abwesenheit: krank, ohne Details'],['schulung','Abwesenheit: Schulung'],['abwesend','Abwesenheit ohne Grund'],
   ['vormittags','Halber Tag: nur vormittags abwesend'],['nachmittags','Halber Tag: nur nachmittags abwesend'],
   ['wöchentlich','Aufgabe jede Woche'],['zweiwöchentlich','Aufgabe alle 2 Wochen'],['monatlich','Aufgabe jeden Monat'],
