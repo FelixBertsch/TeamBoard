@@ -430,6 +430,8 @@ button.date-pick:focus-visible{outline:none;box-shadow:var(--shadow-focus)}
 .done-g .field{margin:12px 0 0}
 .done-g:not(:has(input[name=done]:checked)) .field{display:none}
 #dform:not(:has(input[name=status][value=erledigt]:checked)) .topic-done,#dform:not(:has(input[name=focus][value=side]:checked)) .side-note,#dform:has(input[name=repeat][value=""]:checked) .rep-note{display:none}
+/* "Art" only means something for a team member: a todo of "Ich" is always the own task (kind 'team'). */
+#dform:has(select[name=personId] option[value=me]:checked) .kind-g{display:none}
 /* Absence form: no details for sick days */
 .abs-sick{margin:0}
 #dform:has(input[name=kind][value=Krank]:checked) .abs-note,#dform:not(:has(input[name=kind][value=Krank]:checked)) .abs-sick{display:none}

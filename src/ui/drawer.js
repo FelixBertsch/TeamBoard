@@ -116,8 +116,7 @@ function openTodo(id,preset={}){
   const t=ex||{title:'',personId:preset.personId||'me',kind:'team',due:preset.due||null,note:'',done:false};
   openDrawer({title:ex?'Aufgabe bearbeiten':'Neue Aufgabe',submitLabel:ex?'Speichern':'Aufgabe anlegen',
     body:field('Titel',`<input name="title" value="${esc(t.title)}" autocomplete="off">`)+field('Verantwortlich',`<select name="personId">${personOptions(t.personId)}</select>`)
-      +group('Art',radios('kind',[['team','Aufgabe der Person'],['mine','Mein To-do'],['waiting','Wartet auf']],t.kind))
-      +`<p class="d-note">Bei „Ich“ als Person zählt es immer als eigene Aufgabe.</p>`
+      +`<div class="kind-g">${group('Art',radios('kind',[['team','Aufgabe der Person'],['mine','Mein To-do'],['waiting','Wartet auf']],t.personId==='me'?'team':t.kind))}</div>`
       +withField(t)
       +field('Fällig',dateIn('due',t.due))
       +group('Wiederholen',radios('repeat',REPEATS,t.repeat||''))

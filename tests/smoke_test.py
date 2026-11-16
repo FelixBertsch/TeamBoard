@@ -166,6 +166,11 @@ def desktop_flows(pg, name):
     pg.click(f'.todo-title[data-id="{tid}"]'); pg.wait_for_timeout(100)
     pg.fill('#dform [name=title]', "Desk Aufgabe geändert"); pg.click('#dform button[type=submit]'); pg.wait_for_timeout(100)
     c(state(pg, f"S.todos.find(t=>t.id==='{tid}').title")=="Desk Aufgabe geändert", "edit todo in drawer")
+    # "Art" only for team members: a todo of "Ich" is always the own task, the form must not offer a choice that is dropped
+    pg.click(f'.todo-title[data-id="{tid}"]'); pg.wait_for_timeout(100)
+    shown = pg.locator('#dform .kind-g').is_visible(); pg.select_option('#dform [name=personId]', 'me')
+    c(shown and not pg.locator('#dform .kind-g').is_visible(), "todo form hides Art for Ich")
+    pg.select_option('#dform [name=personId]', 'lena'); pg.keyboard.press("Escape"); pg.wait_for_timeout(100)
     # date fields show TT.MM.JJJJ whatever the browser language (native date inputs showed mm/dd/yyyy)
     pg.click(f'.todo-title[data-id="{tid}"]'); pg.wait_for_timeout(100)
     due = state(pg, f"S.todos.find(t=>t.id==='{tid}').due")
