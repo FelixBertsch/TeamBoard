@@ -1,7 +1,7 @@
 /* Capture sheet (phone "+"): one sheet for todo, talking point, absence and topic. The type picker sits in the sheet's head and
    only the form below it changes: the title stays "Neu erfassen", the sheet keeps its height (CSS: .drawer.capSheet), people are
    chips in every type, and what was typed survives a switch (`capSheet`). Todos run through parseQuick(): "@Name" and "bis Fr" in
-   the text win over the chips; "#krank", "#urlaub" etc. switch to the absence type, prefilled. On a person page the person is
+   the text win over the chips; "#krank", "#urlaub" etc. switch to the absence type, "#thema" to the topic type, prefilled. On a person page the person is
    preselected (ctx()). Editing an existing entry still opens the full forms in drawer.js. */
 const CAP_TYPES=[['todo','Aufgabe'],['talk','Punkt'],['absence','Abwesend'],['topic','Thema']];
 let capSheet=null; // open sheet: {type, text, pid, todo:{…}, absence:{…}, topic:{…}} (last values per type); reset by "+"
@@ -43,7 +43,8 @@ function openCapture(type='todo',keep=null,preset={}){
     capPreview();return;
   }
   if(type==='topic'){
-    const last=capSheet.topic||{},t={pid:last.pid||pid,start:last.start||TODAY,end:last.end||ds(TDN+4),status:last.status||'geplant',focus:last.focus||'main',note:last.note||'',with:last.with||''};
+    const last=capSheet.topic||{},t={pid:preset.personId||last.pid||pid,start:preset.start||last.start||TODAY,end:preset.end||last.end||ds(TDN+4),
+      status:preset.status||last.status||'geplant',focus:last.focus||'main',note:last.note||'',with:preset.with??last.with??''};
     openDrawer({...base,submitLabel:'Thema anlegen',
       body:field('Titel',`<input name="title" value="${text}" autocomplete="off" enterkeyhint="done" autofocus placeholder="z. B. Payment-API v2">`)
         +group('Verantwortlich',radios('pid',people,t.pid))
@@ -79,6 +80,8 @@ function openCapture(type='todo',keep=null,preset={}){
     onSubmit:v=>{const r=parseQuick(v.title||'',{personId:v.pid||'me',kind:v.kind||'team'});if(r.ambiguous)return ambiguousText(r);if(r.err)return r.err;
       if(r.type==='absence'){capSheet.text='';capSheet.absence=null;openCapture('absence','',{personId:r.personId,kind:r.absKind,start:r.start,end:r.end,note:r.note,half:r.half});capSheet.text='';return KEEP_OPEN}
       if(!r.title)return'Bitte gib einen Titel ein.';
+      if(r.type==='topic'){capSheet.topic=null;openCapture('topic',r.title,{personId:r.personId,start:r.start,end:r.end,with:withText(r),
+        status:r.start<=TODAY&&r.end>=TODAY?'aktiv':'geplant'});return KEEP_OPEN}
       const n=newTodo({...r,due:r.due||v.dueDate||v.due||null});save();
       toast(`${kindLabel(n.kind,personOf(n.personId))} angelegt`,true)}});
   capPreview();
@@ -93,11 +96,12 @@ function capPreview(){
   if(capSheet?.type==='absence'){const r=capAbsence(v),g=f.querySelector('.half-g');if(g)g.hidden=!!(r.start&&r.end!==r.start);
     el.innerHTML=r.err?`<span class="warn">${esc(r.err)}</span>`:absPreview({personId:r.personId,absKind:r.kind,start:r.start,end:r.end,half:r.half});return}
   const r=parseQuick(v.title||'',{personId:v.pid||'me',kind:v.kind||'team'}),due=r.due||v.dueDate||v.due||(r.repeat?TODAY:null);
-  f.dataset.me=r.personId==='me'?'1':'0';f.dataset.abs=r.type==='absence'?'1':'0';
-  const sb=f.querySelector('button[type=submit]');if(sb)sb.textContent=r.type==='absence'?'Weiter':'Aufgabe anlegen';
+  f.dataset.me=r.personId==='me'?'1':'0';f.dataset.abs=r.type==='todo'?'0':'1'; // absence or topic: no kind, no due date
+  const sb=f.querySelector('button[type=submit]');if(sb)sb.textContent=r.type==='todo'?'Aufgabe anlegen':'Weiter';
   const unk=r.unknown?`<span class="warn">${esc(unknownText(r.unknown))}</span>`:'';
   if(r.ambiguous){el.innerHTML=`<span class="warn">${esc(ambiguousText(r))}</span>`;return}
   if(r.err){el.innerHTML=`<span class="warn">${esc(r.err)}</span>`;return}
   if(r.type==='absence'){el.innerHTML=absPreview(r)+unk+'<span class="enter">Weiter zu „Abwesend“</span>';return}
+  if(r.type==='topic'){el.innerHTML=topicPreview(r)+unk+'<span class="enter">Weiter zu „Thema“</span>';return}
   el.innerHTML=todoPreview(r,due)+unk;
 }

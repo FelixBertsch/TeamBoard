@@ -12,6 +12,7 @@ function spanLabel(a,b){const lo=Math.min(a,b),hi=Math.max(a,b),n=hi-lo+1;return
    last dragged day ("bis Fr" overrides). With a tag the text goes through parseQuick(), so "@Name" works there too. */
 const INLINE_TAG=/(^|\s)#(ich|meins|wartet|urlaub|krank|schulung|abwesend|vormittags|nachmittags|(zwei)?w(ö|o|oe)chentlich|monatlich|quartalsweise|j(ä|a|ae)hrlich)(?=\s|$)/i;
 function inlineParse(raw,pid,lo,hi){
+  raw=raw.replace(/(^|\s)#thema(?=\s|$)/gi,' '); // plain text is a topic here anyway
   if(!INLINE_TAG.test(raw))return{type:'topic',title:raw.trim()};
   const r=parseQuick(raw,{personId:pid,kind:'team'});
   return r.type==='absence'?{...r,start:ds(lo),end:ds(hi),err:r.half&&lo!==hi?HALF_ONE_DAY:null}:{...r,due:r.due||ds(hi)}}

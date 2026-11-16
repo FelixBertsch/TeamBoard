@@ -1,4 +1,5 @@
-/* Quick capture parser: "@Name Title am 12.11. #ich" for todos, "@Name #urlaub ab 22.12. bis 2.1." for absences. */
+/* Quick capture parser: "@Name Title am 12.11. #ich" for todos, "@Name #urlaub ab 22.12. bis 2.1." for absences,
+   "@Name Kick-off am 20.11. #thema" for topics (one day, or "ab … bis …"). */
 
 /* "12.11." without a year is this year, or next year if that date lies more than 60 days back (December entry for January). */
 function mkDate(d,m,y){if(m<1||m>12||d<1||d>31)return null;const yr=y?(y<100?y+2000:y):_now.getFullYear();
@@ -68,8 +69,8 @@ function parseMentions(t,personId){
 function parseQuick(raw,c){
   let t=' '+raw+' ',personId=c.personId,kind=c.kind,due=null,absKind=null,mixed=false,repeat='';
   const pm=parseMentions(t,personId),unknown=pm.unknown,ambiguous=pm.ambiguous;t=pm.t;personId=pm.personId;
-  let m,half=null;const tag=/\s#(ich|meins|wartet|urlaub|krank|schulung|abwesend|vormittags|nachmittags)(?=\s)/i;
-  while((m=t.match(tag))){const w=m[1].toLowerCase();if(ABS_TAGS[w])absKind=ABS_TAGS[w];else if(w==='vormittags'||w==='nachmittags')half=w[0]==='v'?'am':'pm';else{kind=TODO_TAGS[w];mixed=true}t=t.replace(m[0],' ')}
+  let m,half=null,topic=false;const tag=/\s#(ich|meins|wartet|urlaub|krank|schulung|abwesend|vormittags|nachmittags|thema)(?=\s)/i;
+  while((m=t.match(tag))){const w=m[1].toLowerCase();if(w==='thema')topic=true;else if(ABS_TAGS[w])absKind=ABS_TAGS[w];else if(w==='vormittags'||w==='nachmittags')half=w[0]==='v'?'am':'pm';else{kind=TODO_TAGS[w];mixed=true}t=t.replace(m[0],' ')}
   t=t.replace(/\s#([^\s@#]+)(?=\s)/g,(all,w)=>{const r=REPEAT_TAGS[fold(w)];if(!r)return all;repeat=r;return' '});
   let bis=null;const b=takeDate(t,'bis');if(b){bis=b.date;t=b.t}
   if(absKind){
@@ -78,7 +79,11 @@ function parseQuick(raw,c){
     start=start||TODAY;let end=bis||start;if(end<start)[start,end]=[end,start];
     let note=t.replace(/\s+/g,' ').trim(),dropped=false;
     if(absKind==='Krank'&&note){dropped=true;note=''} // no further details on sick days
-    return{type:'absence',personId,absKind,start,end,note,dropped,mixed,unknown,ambiguous,title:'',half,...(half&&start!==end?{err:HALF_ONE_DAY}:{})};
+    return{type:'absence',personId,absKind,start,end,note,dropped,mixed,unknown,ambiguous,title:'',half,...(topic?{err:TOPIC_ABS}:half&&start!==end?{err:HALF_ONE_DAY}:{})};
+  }
+  if(topic){ // like a todo's due date: a lone date word would eat titles such as "Release 4.2", so "am/ab/vom" or heute/morgen
+    const a=takeDate(t,'ab|vom|von|am')||takeLoneDay(t);if(a)t=a.t;let start=a?.date||TODAY,end=bis||start;if(end<start)[start,end]=[end,start];
+    return{type:'topic',title:t.replace(/\s+/g,' ').trim(),personId,start,end,with:pm.with,mixed,unknown,ambiguous,...(repeat?{err:TOPIC_REPEAT}:half?{err:HALF_NO_ABS}:{})};
   }
   due=bis;
   if(!due){const x=takeDate(t,'am|zum')||takeLoneDay(t);if(x){due=x.date;t=x.t}} // without a date a repeating todo starts today (newTodo)
@@ -88,6 +93,8 @@ function parseQuick(raw,c){
 /* #vormittags/#nachmittags: only with an absence tag and for a single day; otherwise `err` and nothing is created. */
 const HALF_ONE_DAY='Halbe Tage gibt es nur für einen einzelnen Tag.';
 const HALF_NO_ABS='#vormittags und #nachmittags gehen nur zusammen mit #urlaub, #krank, #schulung oder #abwesend.';
+const TOPIC_ABS='#thema geht nicht zusammen mit einer Abwesenheit.';
+const TOPIC_REPEAT='Themen wiederholen sich nicht. Für eine wiederkehrende Aufgabe lass #thema weg.';
 const unknownText=n=>`„${n}“ gibt es weder im Team noch bei den Kontakten. Die Vorschlagsliste legt einen Kontakt an.`;
 /* Preview line of a todo: kind, due date, repetition, involved people. Shared by quick capture and the phone sheet. */
 function todoPreview(r,due){const p=personOf(r.personId),w=withNames(r);
@@ -104,18 +111,26 @@ function absPreview(r){
   if(r.mixed)s+='<span>#ich und #wartet gelten nur für Aufgaben.</span>';
   return s;
 }
+/* Preview line of a topic from quick capture: responsible person, day or range, involved people. */
+function topicPreview(r){const p=personOf(r.personId),w=withNames(r);
+  return`<span><b>Thema: ${esc(p.id==='me'?'Ich':p.name)}</b>, ${esc(rangeText(r.start,r.end))}${r.start===r.end?', ein Tag':''}${w?`, mit ${esc(w)}`:''}</span>`
+    +(r.mixed?'<span>#ich und #wartet gelten nur für Aufgaben.</span>':'')}
 function previewHTML(raw){
-  if(!raw.trim())return`<span>@Name weist zu, weitere @Namen sind beteiligt, „am 12.11.“ oder „bis Fr“ setzt die Frist, #ich macht daraus dein To-do, #wartet ein Nachfassen, #monatlich eine Wiederholung, #urlaub eine Abwesenheit.</span>`;
+  if(!raw.trim())return`<span>@Name weist zu, weitere @Namen sind beteiligt, „am 12.11.“ oder „bis Fr“ setzt die Frist, #ich macht daraus dein To-do, #wartet ein Nachfassen, #monatlich eine Wiederholung, #urlaub eine Abwesenheit, #thema ein Thema.</span>`;
   const r=parseQuick(raw,ctx());
   if(r.ambiguous)return`<span class="warn">${esc(ambiguousText(r))}</span>`;
   if(r.err)return`<span class="warn">${esc(r.err)}</span>`;
   let s;
   if(r.type==='absence')s=absPreview(r);
+  else if(r.type==='topic')s=topicPreview(r);
   else s=todoPreview(r,r.due||(r.repeat?TODAY:null));
   if(r.unknown)s+=`<span class="warn">${esc(unknownText(r.unknown))}</span>`;
   if(r.type==='absence')s+='<span class="enter">Enter trägt ein</span>';else if(r.title)s+='<span class="enter">Enter legt an</span>';
   return s;
 }
+/* Creates the topic parsed from quick capture, active if it runs today. Returns the toast text. */
+function addTopic(r){const o=newEntry({personId:r.personId,title:r.title,start:r.start,end:r.end,status:r.start<=TODAY&&r.end>=TODAY?'aktiv':'geplant',note:''});
+  setWith(o,r.with||[]);S.topics.push(o);save();return`Thema angelegt: ${rangeText(r.start,r.end)}`}
 /* Creates the absence parsed from quick capture. Returns the toast text. */
 function addAbsence(r){
   S.absences.push(newEntry({personId:r.personId,kind:r.absKind,start:r.start,end:r.end,...(r.half&&r.start===r.end?{half:r.half}:{}),...(r.note?{note:r.note}:{})}));save();
@@ -125,5 +140,6 @@ function quickAdd(){const inp=$('#quick');if(!inp)return;closeSuggest();const r=
   if(r.ambiguous||r.err){$('#qprev').innerHTML=previewHTML(inp.value);return}
   if(r.type==='absence'){const msg=addAbsence(r);inp.value='';refocusQuick=true;render();toast(msg,true);return}
   if(!r.title)return;
+  if(r.type==='topic'){const msg=addTopic(r);inp.value='';refocusQuick=true;render();toast(msg,true);return}
   newTodo(r);
   inp.value='';save();refocusQuick=true;render();toast(`${kindLabel(r.kind,personOf(r.personId))} angelegt`,true)}

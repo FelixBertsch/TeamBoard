@@ -7,7 +7,7 @@ const TAG_HELP=[['ich','Mein To-do zur Person'],['wartet','Wartet auf die Person
   ['krank','Abwesenheit: krank, ohne Details'],['schulung','Abwesenheit: Schulung'],['abwesend','Abwesenheit ohne Grund'],
   ['vormittags','Halber Tag: nur vormittags abwesend'],['nachmittags','Halber Tag: nur nachmittags abwesend'],
   ['wöchentlich','Aufgabe jede Woche'],['zweiwöchentlich','Aufgabe alle 2 Wochen'],['monatlich','Aufgabe jeden Monat'],
-  ['quartalsweise','Aufgabe jedes Quartal'],['jährlich','Aufgabe jedes Jahr']];
+  ['quartalsweise','Aufgabe jedes Quartal'],['jährlich','Aufgabe jedes Jahr'],['thema','Thema statt Aufgabe, „am 20.11.“ für einen Tag']];
 let sug=null; // {input, from, to, items, i}
 
 /* The "@…" or "#…" token around the caret, or null. */

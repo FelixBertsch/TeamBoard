@@ -20,7 +20,8 @@ function absRisk(t){
   for(const a of list)for(let i=Math.max(dn(a.start),dn(from));i<=Math.min(dn(a.end),dn(t.end));i++)if(isWorkday(i))off.add(i);
   return off.size*2>total?{abs:list,text:`${who} an ${off.size} von ${total} Arbeitstagen ${how(list)}`}:null;
 }
-const topicLate=t=>t.status==='aktiv'&&t.end<TODAY;
+/* A topic of a single day is something to keep in mind on that day, not work with a deadline: it is never late. */
+const topicLate=t=>t.status==='aktiv'&&t.end<TODAY&&t.start!==t.end;
 /* Acknowledged warnings ("Als geklärt markieren"): S.acks entries {id, sig, items, at}. A yellow issue carries `ack` (stable id),
    `sig` (the date it hangs on) and `items` (the absences behind it). The entry hides it while sig is unchanged and its items are a
    subset of the acknowledged ones: it returns when the end or due date moves or a new absence joins in, not when an absence drops
