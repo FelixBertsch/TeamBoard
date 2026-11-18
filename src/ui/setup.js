@@ -58,7 +58,7 @@ function restoreSetup(v) {
   if (!setupBusy) (f.confirm || f.passphrase).focus();
 }
 
-function startDemo() { Store.mode = 'demo'; S = demo(); expireSick(); resetUndo(); render(); }
+function startDemo() { Store.mode = 'demo'; S = demo(); expireData(); resetUndo(); render(); }
 function leaveDemo() { Store.mode = 'none'; S = empty(); resetUndo(); location.hash = ''; render(); }
 function confirmDisconnect() {
   showDialog({ title: 'Auf diesem Gerät abmelden',

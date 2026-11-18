@@ -15,6 +15,8 @@ const CFG = {
 
   // Days after its end that a "Krank" absence still shows as such; then it becomes "Abwesend" (no sick-day history).
   sickVisibleDays: 7,
+  // Months after "Entfernen" until everything about a person who left is deleted (purgeLeft()). Until then she can come back.
+  leftKeepMonths: 3,
 
   defaultView: 'week', // 'week', 'two' or 'six'
   undoSteps: 40,

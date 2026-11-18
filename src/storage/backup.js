@@ -79,6 +79,6 @@ async function importFile(file) {
   catch (e) { toast(e.newer ? 'Die Sicherung stammt von einer neueren Version des Teamboards. Lade die Seite neu und spiel sie dann ein.' : 'Die Datei ist keine Teamboard-Sicherung'); return; }
   showDialog({ title: 'Sicherung einspielen',
     text: `„${esc(file.name)}“ enthält ${data.people.length} Personen, ${data.topics.length} Themen und ${data.todos.length} Aufgaben. Sie ersetzt alle aktuellen Daten. Strg+Z holt den alten Stand zurück.`,
-    actions: [{ label: 'Abbrechen', kind: 'ghost' }, { label: 'Einspielen', kind: 'primary', run: () => { S = data; expireSick(); save(); render(); toast('Sicherung eingespielt', true); } }] });
+    actions: [{ label: 'Abbrechen', kind: 'ghost' }, { label: 'Einspielen', kind: 'primary', run: () => { S = data; expireData(); save(); render(); toast('Sicherung eingespielt', true); } }] });
 }
 document.addEventListener('change', e => { if (e.target.id === 'importFile' && e.target.files[0]) { importFile(e.target.files[0]); e.target.value = ''; } });

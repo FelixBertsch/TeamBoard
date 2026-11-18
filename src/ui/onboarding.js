@@ -100,7 +100,7 @@ async function startTour(){
   tour={steps:TOUR[k],i:0,back:Store.mode,hash:location.hash};
   if(Store.mode==='github'){
     if(Store.dirty)await Store.push(true);
-    clearTimeout(Store.timer);Store.mode='demo';S=demo();expireSick();resetUndo();
+    clearTimeout(Store.timer);Store.mode='demo';S=demo();expireData();resetUndo();
   }
   ui.filter='alle';ui.off=0;
   const el=document.createElement('div');el.id='tour';el.className='tour';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','tourT');

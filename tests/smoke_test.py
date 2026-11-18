@@ -904,16 +904,36 @@ with sync_playwright() as p:
     n = pg.evaluate("TB.state().topics.filter(t=>t.personId==='tobias').length")
     pg.evaluate("location.hash='ma-tobias'"); pg.wait_for_timeout(150)
     pg.click(".page-head [data-action=edit-person]"); pg.wait_for_timeout(100)
-    check("bleiben im Verlauf" in pg.inner_text("#drawer"), "form explains what removing keeps")
+    when = pg.evaluate("dmy(addMonthsIso(TODAY,CFG.leftKeepMonths))")
+    check(f"Bis zum {when}" in pg.inner_text("#drawer") and "„Ausgeschiedene“" in pg.inner_text("#drawer"), "form names the deletion date and how to come back")
     pg.click("#drawer [data-action=delete]"); pg.wait_for_timeout(150)
     check(pg.evaluate(f"(S=>S.people.find(p=>p.id==='tobias').archived===TODAY&&S.topics.filter(t=>t.personId==='tobias').length==={n})(TB.state())"), "removed person keeps her topics")
     check(pg.locator(".tl-row").count() == rows - 1 and pg.locator('#side a[href="#ma-tobias"]').count() == 0, "removed person leaves timeline and sidebar")
     check(pg.evaluate("TB.state().assignments.filter(a=>a.personId==='tobias').every(a=>a.end&&a.end<=TODAY)"), "running projects end on the day she leaves")
     pg.evaluate("location.hash='verlauf'"); pg.wait_for_timeout(150)
     check(pg.locator("#histPerson option:has-text('ausgeschieden')").count() == 1, "history still offers the removed person")
-    pg.evaluate("location.hash='ma-tobias'"); pg.wait_for_timeout(150)
+    pg.evaluate("openMore()"); pg.wait_for_timeout(100)
+    pg.click("#drawer [data-action=left]"); pg.wait_for_timeout(100)
+    check(f"Tobias Krüger\ngelöscht am {when}" in pg.inner_text("#drawer .more-list"), "Mehr lists people who left with their deletion date")
+    pg.click("#drawer .more-list .prow"); pg.wait_for_timeout(150)
+    check(pg.evaluate("location.hash") == "#ma-tobias" and f"Am {when} löscht" in pg.inner_text(".lead"), "the page of a person who left names the deletion date")
     pg.click("[data-action=restore-person]"); pg.wait_for_timeout(150)
     check(pg.locator('#side a[href="#ma-tobias"]').count() == 1, "removed person can come back")
+    pg.evaluate("openMore()"); pg.wait_for_timeout(100)
+    check(pg.locator("#drawer [data-action=left]").count() == 0, "Ausgeschiedene only while someone has left"); pg.keyboard.press("Escape")
+    # three months after leaving everything about a person is deleted: her entries, mentions and acks; a later leaver stays
+    r = pg.evaluate("""()=>{const S=TB.state(),m=-CFG.leftKeepMonths;
+      S.people.push({id:'old',name:'Olaf Alt',team:'',archived:addMonthsIso(TODAY,m)},{id:'new',name:'Nina Neu',team:'',archived:ds(dn(addMonthsIso(TODAY,m))+1)});
+      S.topics.push({id:'oldt',personId:'old',title:'Alt',start:TODAY,end:TODAY,status:'aktiv'},{id:'wt',personId:'lena',title:'Mit Olaf',start:TODAY,end:TODAY,status:'aktiv',with:['old','mira']});
+      S.todos.push({id:'oldm',personId:'old',kind:'mine',title:'x',done:false},{id:'newt',personId:'new',kind:'team',title:'y',done:false},
+        {id:'orph',personId:'ghost',kind:'team',title:'z',done:false},{id:'wo',personId:'me',kind:'team',title:'w',done:false,with:['old']});
+      S.absences.push({id:'olda',personId:'old',kind:'Urlaub',start:TODAY,end:TODAY});S.talks.push({id:'oldk',personId:'old',text:'k',done:false});
+      S.assignments.push({id:'olds',personId:'old',project:'P',start:TODAY,end:null,billable:true});
+      S.acks.push({id:'abs-oldt',sig:TODAY,items:[]},{id:'asg-olds',sig:TODAY,items:[]},{id:'abs-wt',sig:TODAY,items:[]});save();
+      const n=applyExpiry(),all=PERSON_LISTS.flatMap(k=>S[k]);
+      return [n,!S.people.some(p=>p.id==='old'),!all.some(x=>x.personId==='old'||x.personId==='ghost'),S.topics.find(t=>t.id==='wt').with.join(),
+        !('with' in S.todos.find(t=>t.id==='wo')),S.acks.map(a=>a.id).join(),S.people.some(p=>p.id==='new')&&S.todos.some(t=>t.id==='newt'),undoStack.length,purgeLeft()]}""")
+    check(r == [True, True, True, "mira", True, "abs-wt", True, 0, 0], f"deletion after leaving removes entries, mentions, acks and undo, keeps a later leaver {r}")
     check(not errors, "no JavaScript errors " + "; ".join(errors))
 
     if not ONLY: sync_flows(b)

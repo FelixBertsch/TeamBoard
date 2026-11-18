@@ -4,7 +4,7 @@ Read this file completely before changing anything. It holds the rules that appl
 
 ## What the Teamboard is
 
-A planning tool for a team lead with a small team. Per person it shows topics (work over several days, or a single day to keep in mind) on a timeline, todos with due dates (also recurring), absences, project assignments (customer, period, billable) and points for the next one-on-one. Topics and todos have one responsible person and may mention further people, including contacts outside the team. A history view and a yearly review per person show what was done, holidays and projects. One user, no multi-user editing.
+A planning tool for a team lead with a small team. Per person it shows topics (work over several days, or a single day to keep in mind) on a timeline, todos with due dates (also recurring), absences, project assignments (customer, period, billable) and points for the next one-on-one. Topics and todos have one responsible person and may mention further people, including contacts outside the team. A history view and a yearly review per person show what was done, holidays and projects. People who leave are deleted with everything about them three months later. One user, no multi-user editing.
 
 It runs as a static web app (GitHub Pages) on three kinds of devices: a large monitor for planning, a laptop for the same with less space, and a phone for looking things up and quick capture. Anyone can use the app with their own private GitHub repository for the data; nothing about a specific user lives in this repository.
 
@@ -65,7 +65,7 @@ Three rules follow:
 2. **`render()` destroys the DOM.** It keeps text, caret and focus of fields in `#main` that have an `id` or `data-add`+`data-person` (`keepFields()`/`restoreFields()`). Everything else is gone. Automatic re-renders (resize, sync) therefore check `Store.busy()` first. To clear a field after submit, set `value=''` before `render()`.
 3. **New controls get a `data-action`** and a `case` in `src/ui/events.js`.
 
-**Data in one sentence each** (details in `docs/data-model.md`): `personId: "me"` is the user. People are archived, never deleted. Contacts are their own list and never responsible. `with` lists further involved people, information only. Recurring todos keep exactly one open instance; complete them only via `completeTodo()`/`reopenTodo()`. `important` marks a todo or topic as „Wichtig“; it changes order, never visibility. New entries come from `newEntry()` or `newTodo()` (id and `createdAt`). Sick days expire into "Abwesend" after 7 days and never appear in history or counts. Dates are `YYYY-MM-DD`, `end` inclusive, and day arithmetic uses day numbers (`dn()`/`ds()`), never `Date` objects.
+**Data in one sentence each** (details in `docs/data-model.md`): `personId: "me"` is the user. People who leave are archived; `CFG.leftKeepMonths` (3) later `purgeLeft()` deletes them and everything about them. Contacts are their own list and never responsible. `with` lists further involved people, information only. Recurring todos keep exactly one open instance; complete them only via `completeTodo()`/`reopenTodo()`. `important` marks a todo or topic as „Wichtig“; it changes order, never visibility. New entries come from `newEntry()` or `newTodo()` (id and `createdAt`). Sick days expire into "Abwesend" after 7 days and never appear in history or counts. Dates are `YYYY-MM-DD`, `end` inclusive, and day arithmetic uses day numbers (`dn()`/`ds()`), never `Date` objects.
 
 ## Layout and devices
 
@@ -79,7 +79,7 @@ Three rules follow:
 
 Plus `touch` for a coarse pointer.
 
-- **Monitor:** 264 px sidebar. At the bottom: "Mehr" (contacts, backups, holidays, tour, sign-out), the shortcut list (`KEYS`) and the sync status. Below the timeline the cards form a board of equal columns (as many as fit at 420 px, at most four), placed once per page session so they never jump (`placeBoards()`, `docs/ui.md`).
+- **Monitor:** 264 px sidebar. At the bottom: "Mehr" (contacts, people who left, backups, holidays, tour, sign-out), the shortcut list (`KEYS`) and the sync status. Below the timeline the cards form a board of equal columns (as many as fit at 420 px, at most four), placed once per page session so they never jump (`placeBoards()`, `docs/ui.md`).
 - **Laptop:** the sidebar becomes a 76 px icon bar (avatars with counters, absence dot, name as `title`). Sync status as a dot; the shortcut list only in "Mehr".
 - **Phone:** own views with the same data, actions and forms. Bottom tab bar: Heute, Team, "+", Ich, Mehr. Forms are bottom sheets. The page scrolls as a whole. Tap targets at least 44 px, inputs at least 16 px font, safe areas via `env(safe-area-inset-*)`. "Heute" has folding cards; "Team" is a grid of workdays (one week upright with the tapped day listed below; sideways, class `lay-land`, two weeks visible in a horizontal scroller without the tab bar). Topic bars there move by hold and drag. Details in `docs/ui.md` and `docs/timeline.md`.
 - **Resize and rotation:** `applyLayout()` runs at once, `render()` only when width or layout area changes. Height-only changes (Safari's address bar, keyboard) never re-render.
@@ -125,7 +125,7 @@ Rules most often broken:
 ## Recipes
 
 - **New entry in any list:** `newEntry({...})` (or `newTodo()`), so it gets `id` and `createdAt`.
-- **New field:** handle missing values with `??`; no migration needed. Renames or changed meaning need a `DATA_VERSION` bump and a migration in `normalize()`. A new top-level list goes into `empty()` and `Store.serialize()`. See `docs/data-model.md`.
+- **New field:** handle missing values with `??`; no migration needed. Renames or changed meaning need a `DATA_VERSION` bump and a migration in `normalize()`. A new top-level list goes into `empty()` and `Store.serialize()`; if its entries belong to a person (`personId`), also into `PERSON_LISTS`, so `purgeLeft()` deletes them. See `docs/data-model.md`.
 - **New action:** element with `data-action="name"` and `data-id`, `case'name':` in `events.js`: change `S`, `save()`, `render()`, `toast(text, true)` for undo.
 - **New panel:** a function returning `<section class="card card-pad">` with `<div class="panel-head"><h2 class="h4">Titel</h2></div>` and `.prow` rows (model: `issuesPanel()`). Desktop as `[id, html]` into the `boardHTML()` list of `viewOverview()`/`viewPerson()` (`''` = not shown), phone into the `.m-stack` of `viewToday()`/`viewPersonPhone()`. Everything must stay reachable on the iPhone.
 - **New "Zu klären" rule:** push `{kind:'late'|'warn', act, id, pid, text}` in `allIssues(pid)`; `act` is an existing action like `edit-topic`. A yellow rule also sets `ack` (a stable id with its own prefix), `sig` (the date it hangs on) and, if absences cause it, `items`, so it can be acknowledged (`acks` in `docs/data-model.md`).
@@ -157,7 +157,8 @@ Each with its date and reason, so they are not reopened without a new argument.
 - **One responsible person per entry, others only mentioned** (8.11.2026): responsibility stays clear and `kind` keeps its meaning. Several equal owners per entry were rejected.
 - **Involved team members see the topic in their timeline row as a separate lane** (8.11.2026, replaces "only under ‚Beteiligt an‘"): otherwise the overview shows them as free while they work on it. The lane is thin, dashed and names the responsible person; it does not drag or resize, so moving the topic stays with the owner. Todos are not mirrored, so markers and counts stay per responsible person.
 - **Contacts as their own list**, not a flag on `people` (8.11.2026): every team view keeps reading the team, and contacts never land in counts.
-- **Archive instead of delete** (8.11.2026): the user wants past entries of people who left, for the history and a later search.
+- **Archive instead of delete** (8.11.2026, limited to three months on 18.11.2026): the user wanted past entries of people who left, for the history and a later search. See the next entry.
+- **Delete people three months after they leave** (18.11.2026): data about employees is kept no longer than needed. "Entfernen" archives as before; `CFG.leftKeepMonths` after `archived`, `purgeLeft()` deletes the person and every entry about her (topics, todos incl. my to-dos about her, absences, talking points, projects), her mentions in `with` and acks of deleted entries. Until then "Mehr" → "Ausgeschiedene" lists her with the date and her page offers "Zurück ins Team". Runs on load like `expireSick()`, the same on every device, and clears the undo stack. Accepted costs: projects and history of people who left vanish too; names inside titles stay; older commits of the data repository still hold the encrypted data.
 - **Recurring todos with one open instance** (8.11.2026): no future copies on the timeline, the rhythm never drifts, late completion creates no backlog.
 - **Data repository per device, not in the code** (8.11.2026): anyone can use the published app with their own private repository, without a fork.
 - **Holidays per state as a synced setting** (8.11.2026): computed, no data source; every device shows the same days off.

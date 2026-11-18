@@ -133,8 +133,27 @@ const absLabel=k=>k==='Sonstiges'?'Abwesend':k;
    (displayed "Abwesend") and loses its note. Same result on every device, so merging sees no conflict. */
 function expireSick(){const lim=ds(TDN-CFG.sickVisibleDays);let n=0;
   for(const a of S.absences)if(a.kind==='Krank'&&a.end<lim){a.kind='Sonstiges';delete a.note;n++}return n}
-/* Applies expireSick() to a freshly loaded state without an undo step; Store.changed() commits it. */
-function applyExpiry(){if(!expireSick())return false;lastSaved=snapshot();Store.changed();return true}
+/* People who left are deleted CFG.leftKeepMonths after `archived`, with everything about them: their entries in every list of
+   PERSON_LISTS (topics, todos incl. my to-dos about them, absences, talking points, projects), their mentions in `with`
+   and acks of deleted entries. Names inside free text (a title "Review mit Jonas") stay. Entries whose person is gone are
+   removed too: a device that was open across the deletion date may merge some back. Same result on every device.
+   Returns the number of changes. */
+const PERSON_LISTS=['topics','todos','absences','talks','assignments'];
+const purgeDate=p=>addMonthsIso(p.archived,CFG.leftKeepMonths);
+function purgeLeft(){
+  const gone=S.people.filter(p=>p.archived&&purgeDate(p)<=TODAY).map(p=>p.id);let n=gone.length;
+  if(n)S.people=S.people.filter(p=>!gone.includes(p.id));
+  const known=new Set(['me',...S.people.map(p=>p.id),...S.contacts.map(k=>k.id)]),del=new Set();
+  for(const k of PERSON_LISTS){const keep=S[k].filter(x=>known.has(x.personId));if(keep.length===S[k].length)continue;
+    for(const x of S[k])if(!known.has(x.personId))del.add(x.id);n+=S[k].length-keep.length;S[k]=keep}
+  for(const t of[...S.topics,...S.todos])if(t.with?.some(id=>!known.has(id))){const w=t.with.filter(id=>known.has(id));if(w.length)t.with=w;else delete t.with;n++}
+  if(del.size)S.acks=S.acks.filter(a=>!del.has(a.id.slice(a.id.indexOf('-')+1)));
+  return n}
+/* Everything that expires on load: people who left (purgeLeft()) and sick days (expireSick()). */
+const expireData=()=>purgeLeft()+expireSick();
+/* Applies expireData() to a freshly loaded state without an undo step; Store.changed() commits it. A deletion also clears the
+   undo stack, so nothing about a deleted person comes back with Ctrl+Z. */
+function applyExpiry(){const p=purgeLeft(),n=p+expireSick();if(!n)return false;if(p)undoStack.length=0;lastSaved=snapshot();Store.changed();return true}
 
 /* Project assignments: a person works on a project from start to end (null = open), billable or internal. */
 const asgActive=(a,day=TODAY)=>a.start<=day&&(!a.end||a.end>=day);

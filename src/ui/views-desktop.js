@@ -190,13 +190,15 @@ function forList(x){
     +(ui.showDone?dt.map(topicRow).join('')+done.map(t=>todoRow(t,false)).join(''):'');
   return h;
 }
+/* Lead of the page of a person who left: when everything about her is deleted and how to bring her back. */
+const leftText=p=>`${firstName(p)} ist nicht mehr im Team. Am ${dmy(purgeDate(p))} löscht das Teamboard alles zu ${firstName(p)}, bis dahin holst du die Person mit „Zurück ins Team“ zurück.`;
 function viewPerson(id,banner=''){
   const x=personParts(id),p=x.p,isMe=x.isMe;
   const arch=!!p.archived;
   return`<div class="wrap">${banner}<div class="page-head"><div class="head-id">${avatar(p,'lg')}<div><p class="overline">${esc(isMe?['Meine Planung',projectLabel('me')].filter(Boolean).join(' · '):arch?`Ausgeschieden am ${dmy(p.archived)}`:(teamLine(p)||'Team'))}</p><h1>${esc(isMe?'Meine Planung':p.name)}</h1></div></div>
     <div class="actions">${arch?`<button class="btn secondary" data-action="restore-person" data-id="${id}">Zurück ins Team</button>`:`${isMe?'':`<button class="btn ghost" data-action="edit-person" data-id="${id}">Bearbeiten</button>`}
     <button class="btn secondary" data-action="new-absence" data-person="${id}">Abwesenheit eintragen</button><button class="btn accent" data-action="new-topic" data-person="${id}">${ic('plus',18,2.5)}Thema anlegen</button>`}</div></div>
-  <p class="lead">${esc(arch?`${firstName(p)} ist nicht mehr im Team. Themen, Aufgaben und Projekte bleiben hier und im Verlauf.`:personHeadline(p))}</p>
+  <p class="lead">${esc(arch?leftText(p):personHeadline(p))}</p>
   ${arch?'':quickBlock()}
   ${tlSection([id])}
   ${boardHTML('p-'+id,[['tasks',`<section class="card card-pad" data-tour="tasks">${x.tasks}</section>`],['issues',issuesPanel(id)],['involved',x.involved],

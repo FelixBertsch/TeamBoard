@@ -35,6 +35,8 @@ Wer die Seite ausliefert, bestimmt den Code, der deinen Token und dein Passwort 
 
 Jede Änderung landet sofort im Speicher des Geräts und wird ein bis zwei Sekunden später als Commit ins Daten-Repository geschrieben, verschlüsselt mit AES-GCM (Schlüssel aus dem Passwort per PBKDF2, 600.000 Runden). Andere Geräte holen Änderungen spätestens nach 30 Sekunden oder wenn die App in den Vordergrund kommt. Ändern zwei Geräte gleichzeitig, führt die App die Stände pro Eintrag zusammen. Offline gehen Änderungen nicht verloren, sie werden nachgereicht. Die Commit-Historie des Daten-Repositorys enthält jeden früheren Stand.
 
+Entfernst du eine Person aus dem Team, löscht das Teamboard drei Monate später alles zu ihr: Themen, Aufgaben, Abwesenheiten, Projekte und Gesprächspunkte. Bis dahin holst du sie unter „Mehr“ → „Ausgeschiedene“ zurück. Ältere Stände in der Commit-Historie enthalten die Person weiterhin, verschlüsselt.
+
 ## Entwickeln
 
 Kein Build, keine Abhängigkeiten. Ordner per HTTP ausliefern und im Browser öffnen:

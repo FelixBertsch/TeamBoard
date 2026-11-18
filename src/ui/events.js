@@ -29,6 +29,7 @@ document.addEventListener('click',async e=>{
       case'edit-person':openPerson(id);break;
       case'restore-person':{const p=S.people.find(x=>x.id===id);if(!p)break;delete p.archived;save();render();toast(`${p.name} ist wieder im Team`,true);break}
       case'contacts':openContacts();break;
+      case'left':openLeft();break;
       case'edit-contact':openContact(id);break;
       case'toggle':{const t=S.todos.find(x=>x.id===id);if(!t)break;
         if(t.done){reopenTodo(t);save();render();break}

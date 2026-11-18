@@ -142,21 +142,22 @@ function openTodo(id,preset={}){
       save();toast(next?`Erledigt. Nächste fällig ${dueLabel(next.due)}`:'Aufgabe gespeichert',true)},
     onDelete:ex?()=>{S.todos=S.todos.filter(x=>x.id!==id);save();toast(ex.repeat&&!ex.done?'Aufgabe gelöscht, die Wiederholung endet':'Aufgabe gelöscht',true)}:null});
 }
-/* Team member. "Entfernen" archives the person (`archived` = date): she leaves the team views, but her topics, todos,
-   absences and projects stay for the history and the yearly review. Running assignments end today, planned ones go. */
+/* Team member. "Entfernen" archives the person (`archived` = date): she leaves the team views. Her entries stay for
+   CFG.leftKeepMonths, then purgeLeft() deletes everything about her; until then "Zurück ins Team" brings her back
+   (reached via "Mehr" → "Ausgeschiedene"). Running assignments end today, planned ones go; restoring does not undo that. */
 function openPerson(id){
   const ex=id?S.people.find(p=>p.id===id):null;
   let info='';
   if(ex&&!ex.archived){const f=firstName(ex),nt=S.todos.filter(t=>!t.done&&t.personId===id&&t.kind==='team').length,np=S.topics.filter(t=>t.personId===id&&t.status!=='erledigt').length;
     const open=[nt?(nt===1?'eine Aufgabe':nt+' Aufgaben'):'',np?(np===1?'ein Thema':np+' Themen'):''].filter(Boolean).join(' und ');
-    info=`<p class="d-note">„Entfernen“ nimmt ${esc(f)} aus dem Team. Themen, Aufgaben, Urlaube und Projekte bleiben im Verlauf und im Rückblick.${open?` Offen sind noch ${open}; gib sie vorher jemand anderem, wenn sie weiterlaufen.`:''}</p>`}
+    info=`<p class="d-note">„Entfernen“ nimmt ${esc(f)} aus dem Team. Bis zum ${dmy(addMonthsIso(TODAY,CFG.leftKeepMonths))} holst du ${esc(f)} unter „Mehr“ → „Ausgeschiedene“ zurück. Danach löscht das Teamboard alles zu ${esc(f)}: Themen, Aufgaben, Abwesenheiten, Projekte und Gesprächspunkte.${open?` Offen sind noch ${open}; gib sie vorher jemand anderem, wenn sie weiterlaufen.`:''}</p>`}
   openDrawer({title:ex?'Mitarbeiter bearbeiten':'Mitarbeiter hinzufügen',submitLabel:ex?'Speichern':'Hinzufügen',deleteLabel:'Entfernen',
     body:field('Name',`<input name="name" value="${esc(ex?.name)}" autocomplete="off" placeholder="Vor- und Nachname">`)
       +field('Team',`<input name="team" value="${esc(ex?.team)}" list="teamNames" autocomplete="off" placeholder="z. B. BT Management"><datalist id="teamNames">${teamNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`)+info,
     onSubmit:v=>{const name=(v.name||'').trim(),tm=(v.team||'').trim();if(!name)return'Bitte gib einen Namen ein.';
       if(ex){ex.name=name;ex.team=tm;save();toast('Gespeichert',true)}
       else{const p=newEntry({id:'p'+uid(),name,team:tm});S.people.push(p);save();location.hash='ma-'+p.id;toast(`${firstName(p)} hinzugefügt`,true)}},
-    onDelete:ex&&!ex.archived?()=>{archivePerson(ex);save();location.hash='uebersicht';toast(`${ex.name} entfernt. Die Einträge bleiben im Verlauf.`,true)}:null});
+    onDelete:ex&&!ex.archived?()=>{archivePerson(ex);save();location.hash='uebersicht';toast(`${ex.name} entfernt. Gelöscht wird am ${dmy(purgeDate(ex))}.`,true)}:null});
 }
 function archivePerson(p){p.archived=TODAY;
   S.assignments=S.assignments.filter(a=>a.personId!==p.id||a.start<=TODAY);
@@ -185,11 +186,22 @@ function openContact(id){
     onDelete:()=>{k.archived=TODAY;save();openContacts();toast(`${k.name} entfernt`,true)}});
 }
 
-/* "Mehr": sync status, backups, connection, add person, contacts. Reached from the phone tab bar and the laptop icon bar. */
+/* People who left („Ausgeschiedene“), latest first, with the day purgeLeft() deletes everything about them. A row opens the
+   person page, which offers „Zurück ins Team“. Listed in "Mehr" only while someone has left. */
+function openLeft(){
+  const list=S.people.filter(p=>p.archived).sort((a,b)=>b.archived.localeCompare(a.archived));
+  openDrawer({title:'Ausgeschiedene',live:true,
+    body:`<p class="d-note" style="margin-top:0">Das Teamboard löscht alles zu einer Person ${CFG.leftKeepMonths} Monate nach ihrem Austritt: Themen, Aufgaben, Abwesenheiten, Projekte und Gesprächspunkte. Bis dahin holst du sie auf ihrer Seite mit „Zurück ins Team“ zurück.</p>`
+      +`<div class="more-list">${list.map(p=>`<button type="button" class="prow" data-action="go" data-v="ma-${p.id}">${avatar(p,'xs')}<span class="pt">${esc(p.name)}</span><span class="pd">gelöscht am ${dmy(purgeDate(p))}</span></button>`).join('')
+        ||'<p class="empty">Niemand ist ausgeschieden.</p>'}</div>`});
+}
+
+/* "Mehr": sync status, backups, connection, add person, contacts, people who left. Reached from the phone tab bar and the laptop icon bar. */
 function openMore(){
   const row=(act,icon,label)=>`<button type="button" class="prow" data-action="${act}">${ic(icon,18)}<span class="pt">${label}</span></button>`;
   const rows=`<button type="button" class="prow" data-action="go" data-v="verlauf">${ic('history',18)}<span class="pt">Verlauf</span></button>`
-    +row('new-person','userPlus','Person hinzufügen')+row('contacts','contact','Kontakte')+storageActions().map(a=>row(...a)).join('');
+    +row('new-person','userPlus','Person hinzufügen')+row('contacts','contact','Kontakte')+(S.people.some(p=>p.archived)?row('left','userMinus','Ausgeschiedene'):'')
+    +storageActions().map(a=>row(...a)).join('');
   openDrawer({title:'Mehr',live:true,body:`<div class="more-sync">${syncHTML(true).replace(' id="syncState"','')}</div><div class="more-list">${rows}</div>
     ${isPhone()?'':`<div class="more-keys">${keysHTML()}</div>`}`});
 }
