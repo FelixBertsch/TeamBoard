@@ -512,6 +512,24 @@ details.rv[open] summary .ic{transform:rotate(90deg)}
 details.rv .prow{padding-left:108px}
 .rv-foot{padding-top:10px;border-top:1px solid var(--border-subtle)}
 
+/* Notes („Notizen“, notes.js): card on the person page and page #notizen-<id>. Hidden state, rows with full text. */
+.n-hidden{display:flex;gap:10px;align-items:center}
+.n-hidden .ic{flex:none;color:var(--text-subtle)}
+.n-page .n-hidden{padding-top:0}
+.n-page>.btn{margin-top:8px}
+.nrow{align-items:flex-start}
+.nrow .h-body{padding-top:5px}
+.nrow .h-d{padding-top:6px}
+.n-ic.on{background:var(--navy-100);color:var(--navy-800)}
+.n-t{font-size:16px;line-height:1.45;white-space:pre-line;overflow-wrap:anywhere}
+.ncard .n-t{font-size:15px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ncard .n-list{display:grid;gap:2px}
+.n-foot{display:flex;align-items:center;gap:12px;padding-top:10px;margin-top:8px;border-top:1px solid var(--border-subtle)}
+.n-foot .sp{flex:1}
+.n-bar{display:flex;gap:12px 20px;align-items:center;flex-wrap:wrap}
+.n-year b{min-width:52px;text-align:center;font-size:18px;font-weight:800;color:var(--text-strong);font-variant-numeric:tabular-nums}
+.n-t mark{background:var(--navy-100);color:var(--text-strong);font-weight:800;border-radius:4px;padding:0 1px}
+
 /* Datalist fields (project names): suggestions while typing, no dropdown arrow */
 input[list]::-webkit-calendar-picker-indicator{display:none!important}
 /* Absence badge in todo rows; .away alone is the phone chip (layout.css) */

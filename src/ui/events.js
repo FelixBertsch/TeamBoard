@@ -20,6 +20,12 @@ document.addEventListener('click',async e=>{
       case'new-assignment':openAssignment(null,{personId:a.dataset.person||ctx().personId});break;
       case'edit-assignment':openAssignment(id);break;
       case'edit-talk':openTalk(id);break;
+      case'notes-show':showNotes(a.dataset.person);break;
+      case'notes-hide':hideNotes();render();break;
+      case'new-note':openNote(null,{personId:a.dataset.person});break;
+      case'edit-note':openNote(id);break;
+      case'notes-year':ui.notes.year=(ui.notes.year??+TODAY.slice(0,4))+(+a.dataset.v);render();break;
+      case'notes-tone':ui.notes.tone=a.dataset.v;render();break;
       case'go':closeDrawer(false);location.hash=a.dataset.v;break;
       case'hist-type':ui.hist.type=a.dataset.v;render();break;
       case'hist-more':ui.hist.weeks+=8;render();break;
@@ -87,6 +93,7 @@ document.addEventListener('input',e=>{const el=e.target;
   if(suggestField(el)){fieldChanged(el);updateSuggest(el);return}
   if(drawerCfg?.capture&&el.closest('#dform'))capPreview();
   if(el.id==='histSearch'){ui.hist.q=el.value;render()}
+  if(el.id==='notesSearch'){ui.notes.q=el.value;render()}
   if(el.name==='project'&&drawerCfg?.assignment==='new'){const last=[...S.assignments].reverse().find(a=>fold(a.project)===fold(el.value.trim()));
     if(last)el.form.querySelector(`input[name=billable][value=${last.billable?'ja':'nein'}]`).checked=true}});
 /* Suggestion list: pick with pointer before the field loses focus; caret moves and focus loss update or close it. */

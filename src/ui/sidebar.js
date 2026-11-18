@@ -12,8 +12,8 @@ const keysHTML=()=>`<dl class="keys">${KEYS.map(([k,l])=>`<dt>${k.map(x=>`<kbd>$
 function renderSide(r){
   const open=S.todos.filter(t=>!t.done);
   const meCount=open.filter(t=>t.personId==='me'||(t.kind==='mine'&&isActive(t.personId))).length;
-  const cur=id=>(r.view==='person'&&r.id===id)?' aria-current="page"':'';
-  if(isPhone()){const on=c=>c?' aria-current="page"':'',team=r.view==='team'||(r.view==='person'&&r.id!=='me');
+  const cur=id=>((r.view==='person'||r.view==='notes')&&r.id===id)?' aria-current="page"':'';
+  if(isPhone()){const on=c=>c?' aria-current="page"':'',team=r.view==='team'||((r.view==='person'||r.view==='notes')&&r.id!=='me');
     $('#side').innerHTML=`<a class="tab-i" href="#uebersicht" aria-label="Heute"${on(r.view==='overview')}>${ic('sun',24)}<span>Heute</span></a>
       <a class="tab-i" href="#team" aria-label="Team"${on(team)}>${ic('users',24)}<span>Team</span></a>
       <button class="tab-plus" data-action="capture" aria-label="Neu erfassen">${ic('plus',28,2.5)}</button>

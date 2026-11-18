@@ -158,7 +158,7 @@ function personParts(id){
       ${tops.length?tops.map(topicRow).join(''):`<p class="empty">Noch keine Themen geplant. ${isPhone()?'„Anlegen“ plant das erste.':'Zieh im Zeitplan über die Tage, die es dauern soll.'}</p>`}</section>`;
   const absPanel=`<section class="card card-pad"><div class="panel-head"><h2 class="h4">Abwesenheiten</h2><button class="link-btn" data-action="new-absence" data-person="${id}">Eintragen</button></div>
       ${absList.length?absList.map(a=>`<button class="prow" data-action="edit-absence" data-id="${a.id}"><span class="pt">${esc(absLabel(a.kind))}, ${esc(absWhen(a))}</span><span class="pd">${daysText(absDays(a))}</span></button>`).join(''):'<p class="empty">Keine Abwesenheit eingetragen.</p>'}</section>`;
-  return{p,isMe,tasks,talkPanel,topicsPanel,absPanel,asgPanel:assignmentsPanel(id),review:reviewPanel(id),involved:isMe?'':involvedPanel(id)};
+  return{p,isMe,tasks,talkPanel,topicsPanel,absPanel,asgPanel:assignmentsPanel(id),review:reviewPanel(id),involved:isMe?'':involvedPanel(id),notes:isMe?'':notesCard(id)};
 }
 const TOPIC_ST={aktiv:'Aktiv',geplant:'Geplant',erledigt:'Erledigt'};
 const topicMark=t=>t.important&&t.status!=='erledigt'?impMark(14):'';
@@ -202,5 +202,5 @@ function viewPerson(id,banner=''){
   ${arch?'':quickBlock()}
   ${tlSection([id])}
   ${boardHTML('p-'+id,[['tasks',`<section class="card card-pad" data-tour="tasks">${x.tasks}</section>`],['issues',issuesPanel(id)],['involved',x.involved],
-    ['talks',x.talkPanel],['projects',x.asgPanel],['topics',x.topicsPanel],['absences',x.absPanel],['review',x.review]])}</div>`;
+    ['talks',x.talkPanel],['projects',x.asgPanel],['topics',x.topicsPanel],['absences',x.absPanel],['review',x.review],['notes',x.notes]])}</div>`;
 }

@@ -51,9 +51,16 @@ function demo(){
   const as=(personId,project,s,e,billable=true)=>({id:uid(),personId,project,start:ds(TDN+s),end:e===null?null:ds(TDN+e),billable,note:''});
   const assignments=[as('lena','Kranich Versicherung',-210,null),as('jonas','Stadtwerke Elmstadt',-120,18),as('aylin','Kranich Versicherung',-60,null),
     as('aylin','Interne Plattform',-60,null,false),as('tobias','Lotsen Logistik',-300,-31),as('tobias','Kanzlei Berg',-30,90)];
-  return{people,contacts,topics,absences,todos,talks,assignments,settings:[{id:'region',value:'NW'}],acks:[]};
+  const nt=(personId,ago,text,tone)=>({id:uid(),personId,day:ds(TDN-ago),text,...(tone?{tone}:{})});
+  const notes=[nt('lena',12,'Workshop bei Kranich souverän moderiert, der Fachbereich hat sich danach ausdrücklich bedankt.','plus'),
+    nt('lena',58,'Release-Notes ohne Gegenlesen an den Kunden geschickt, zwei Fehler im Text. Im Gespräch sofort selbst angesprochen.','minus'),
+    nt('lena',130,'Wünscht sich mehr Verantwortung in der Architektur.'),
+    nt('lena',400,'Einarbeitung von Aylin übernommen, mit eigenem Plan für die ersten vier Wochen.','plus'),
+    nt('jonas',9,'Barrierefreiheitsprüfung der Formulare aus eigener Initiative eingeführt.','plus'),
+    nt('jonas',33,'Abgabe des Kundenportals ohne Regressionstest, der Kunde meldete drei Fehler.','minus')];
+  return{people,contacts,topics,absences,todos,talks,assignments,notes,settings:[{id:'region',value:'NW'}],acks:[]};
 }
-const empty=()=>({people:[],contacts:[],topics:[],absences:[],todos:[],talks:[],assignments:[],settings:[],acks:[]});
+const empty=()=>({people:[],contacts:[],topics:[],absences:[],todos:[],talks:[],assignments:[],notes:[],settings:[],acks:[]});
 const DATA_VERSION=2;
 /* New entries carry createdAt (ISO timestamp) for a later search and for sorting; older entries have none. */
 const newEntry=o=>({id:uid(),...o,createdAt:new Date().toISOString()});
@@ -88,7 +95,8 @@ lastSaved=JSON.stringify(S);
 const ui={boards:{},keepIss:{},showAcked:false,absAll:false,filter:'alle',tab:{},forPid:'',off:0,range:['week','two','six'].includes(CFG.defaultView)?CFG.defaultView:'week',more:false,showDone:false,
   hist:{type:'alle',pid:'',q:'',weeks:8},year:{}, // hist: filters of the history view; year: review year per person
   fold:{todos:true,issues:true,abs:false,talk:false},redSeen:[],grp:{}, // phone "Heute": open cards, red issues seen when folding, open todo groups
-  toff:0,tday:null,lgX:null}; // phone team grid: week offset and tapped day upright, scroll position sideways
+  toff:0,tday:null,lgX:null, // phone team grid: week offset and tapped day upright, scroll position sideways
+  notes:{pid:null,at:0,q:'',tone:'alle',year:null}}; // notes.js: revealed person (memory only), last input, search, filter, year
 try{const u=JSON.parse(localStorage.getItem(KEY+'.ui')||'{}');if(['week','two','six'].includes(u.range))ui.range=u.range;
   if(u.fold&&typeof u.fold==='object')Object.assign(ui.fold,u.fold);if(Array.isArray(u.redSeen))ui.redSeen=u.redSeen}catch(e){}
 
@@ -134,11 +142,11 @@ const absLabel=k=>k==='Sonstiges'?'Abwesend':k;
 function expireSick(){const lim=ds(TDN-CFG.sickVisibleDays);let n=0;
   for(const a of S.absences)if(a.kind==='Krank'&&a.end<lim){a.kind='Sonstiges';delete a.note;n++}return n}
 /* People who left are deleted CFG.leftKeepMonths after `archived`, with everything about them: their entries in every list of
-   PERSON_LISTS (topics, todos incl. my to-dos about them, absences, talking points, projects), their mentions in `with`
+   PERSON_LISTS (topics, todos incl. my to-dos about them, absences, talking points, projects, notes), their mentions in `with`
    and acks of deleted entries. Names inside free text (a title "Review mit Jonas") stay. Entries whose person is gone are
    removed too: a device that was open across the deletion date may merge some back. Same result on every device.
    Returns the number of changes. */
-const PERSON_LISTS=['topics','todos','absences','talks','assignments'];
+const PERSON_LISTS=['topics','todos','absences','talks','assignments','notes'];
 const purgeDate=p=>addMonthsIso(p.archived,CFG.leftKeepMonths);
 function purgeLeft(){
   const gone=S.people.filter(p=>p.archived&&purgeDate(p)<=TODAY).map(p=>p.id);let n=gone.length;
@@ -207,5 +215,6 @@ function reopenTodo(t){t.done=false;delete t.doneAt;
   if(t.repeat&&t.series)S.todos=S.todos.filter(x=>!(x.series===t.series&&x!==t&&!x.done&&x.due>t.due))}
 
 function route(){const h=location.hash.slice(1);if(h==='ich')return{view:'person',id:'me'};if(h==='team')return{view:'team'};if(h==='verlauf')return{view:'history'};
-  if(h.startsWith('ma-')){const id=h.slice(3);if(S.people.some(p=>p.id===id))return{view:'person',id}}return{view:'overview'}}
+  if(h.startsWith('ma-')){const id=h.slice(3);if(S.people.some(p=>p.id===id))return{view:'person',id}}
+  if(h.startsWith('notizen-')){const id=h.slice(8);if(S.people.some(p=>p.id===id))return{view:'notes',id}}return{view:'overview'}}
 function ctx(){const r=route();if(r.view!=='person'||r.id==='me')return{personId:'me',kind:'team'};return{personId:r.id,kind:ui.tab[r.id]||'team'}}

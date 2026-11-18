@@ -150,7 +150,7 @@ function openPerson(id){
   let info='';
   if(ex&&!ex.archived){const f=firstName(ex),nt=S.todos.filter(t=>!t.done&&t.personId===id&&t.kind==='team').length,np=S.topics.filter(t=>t.personId===id&&t.status!=='erledigt').length;
     const open=[nt?(nt===1?'eine Aufgabe':nt+' Aufgaben'):'',np?(np===1?'ein Thema':np+' Themen'):''].filter(Boolean).join(' und ');
-    info=`<p class="d-note">„Entfernen“ nimmt ${esc(f)} aus dem Team. Bis zum ${dmy(addMonthsIso(TODAY,CFG.leftKeepMonths))} holst du ${esc(f)} unter „Mehr“ → „Ausgeschiedene“ zurück. Danach löscht das Teamboard alles zu ${esc(f)}: Themen, Aufgaben, Abwesenheiten, Projekte und Gesprächspunkte.${open?` Offen sind noch ${open}; gib sie vorher jemand anderem, wenn sie weiterlaufen.`:''}</p>`}
+    info=`<p class="d-note">„Entfernen“ nimmt ${esc(f)} aus dem Team. Bis zum ${dmy(addMonthsIso(TODAY,CFG.leftKeepMonths))} holst du ${esc(f)} unter „Mehr“ → „Ausgeschiedene“ zurück. Danach löscht das Teamboard alles zu ${esc(f)}: Themen, Aufgaben, Abwesenheiten, Projekte, Gesprächspunkte und Notizen.${open?` Offen sind noch ${open}; gib sie vorher jemand anderem, wenn sie weiterlaufen.`:''}</p>`}
   openDrawer({title:ex?'Mitarbeiter bearbeiten':'Mitarbeiter hinzufügen',submitLabel:ex?'Speichern':'Hinzufügen',deleteLabel:'Entfernen',
     body:field('Name',`<input name="name" value="${esc(ex?.name)}" autocomplete="off" placeholder="Vor- und Nachname">`)
       +field('Team',`<input name="team" value="${esc(ex?.team)}" list="teamNames" autocomplete="off" placeholder="z. B. BT Management"><datalist id="teamNames">${teamNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`)+info,
@@ -191,7 +191,7 @@ function openContact(id){
 function openLeft(){
   const list=S.people.filter(p=>p.archived).sort((a,b)=>b.archived.localeCompare(a.archived));
   openDrawer({title:'Ausgeschiedene',live:true,
-    body:`<p class="d-note" style="margin-top:0">Das Teamboard löscht alles zu einer Person ${CFG.leftKeepMonths} Monate nach ihrem Austritt: Themen, Aufgaben, Abwesenheiten, Projekte und Gesprächspunkte. Bis dahin holst du sie auf ihrer Seite mit „Zurück ins Team“ zurück.</p>`
+    body:`<p class="d-note" style="margin-top:0">Das Teamboard löscht alles zu einer Person ${CFG.leftKeepMonths} Monate nach ihrem Austritt: Themen, Aufgaben, Abwesenheiten, Projekte, Gesprächspunkte und Notizen. Bis dahin holst du sie auf ihrer Seite mit „Zurück ins Team“ zurück.</p>`
       +`<div class="more-list">${list.map(p=>`<button type="button" class="prow" data-action="go" data-v="ma-${p.id}">${avatar(p,'xs')}<span class="pt">${esc(p.name)}</span><span class="pd">gelöscht am ${dmy(purgeDate(p))}</span></button>`).join('')
         ||'<p class="empty">Niemand ist ausgeschieden.</p>'}</div>`});
 }

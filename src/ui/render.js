@@ -16,7 +16,7 @@ function render(){
   const banner=tourActive()?`<div class="banner">Rundgang mit Beispieldaten. Deine eigenen Daten bleiben unverändert.</div>`
     :Store.mode==='demo'?`<div class="banner">Beispielmodus: Änderungen werden nicht gespeichert.<span class="sp"></span><button class="btn secondary sm" data-action="tour">Rundgang</button><button class="btn accent sm" data-action="leave-demo">Teamboard einrichten</button></div>`
     :Store.outdated?`<div class="banner">Eine neuere Version des Teamboards hat gespeichert. Bis zum Neuladen synchronisiert dieses Fenster nicht, deine Änderungen bleiben auf dem Gerät.<span class="sp"></span><button class="btn accent sm" data-action="reload">Neu laden</button></div>`:'';
-  $('#main').innerHTML=r.view==='history'?viewHistory(banner):k==='phone'?(r.view==='overview'?viewToday(banner):r.view==='team'?viewTeam(banner):viewPersonPhone(r.id,banner))
+  $('#main').innerHTML=r.view==='history'?viewHistory(banner):r.view==='notes'?viewNotes(r.id,banner):k==='phone'?(r.view==='overview'?viewToday(banner):r.view==='team'?viewTeam(banner):viewPersonPhone(r.id,banner))
     :(r.view==='person'?viewPerson(r.id,banner):viewOverview(banner));
   placeBoards();restoreFields(keep);restoreGridScroll();
   if(refocusQuick){$('#quick')?.focus();refocusQuick=false}}

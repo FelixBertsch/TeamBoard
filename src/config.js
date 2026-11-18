@@ -17,6 +17,8 @@ const CFG = {
   sickVisibleDays: 7,
   // Months after "Entfernen" until everything about a person who left is deleted (purgeLeft()). Until then she can come back.
   leftKeepMonths: 3,
+  // Minutes without a click or key press until revealed notes ("Notizen") hide again.
+  notesHideMinutes: 5,
 
   defaultView: 'week', // 'week', 'two' or 'six'
   undoSteps: 40,

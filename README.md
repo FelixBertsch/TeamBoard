@@ -1,6 +1,6 @@
 # Teamboard
 
-Ein Planungsboard für Teamleitungen: Themen auf einer Zeitleiste, Aufgaben mit Fristen (auch wiederkehrend), Abwesenheiten, Projekteinsätze und Punkte fürs nächste 1:1, dazu ein Verlauf mit allem, was erledigt ist. Läuft im Browser auf Rechner und Smartphone und lässt sich wie eine App installieren.
+Ein Planungsboard für Teamleitungen: Themen auf einer Zeitleiste, Aufgaben mit Fristen (auch wiederkehrend), Abwesenheiten, Projekteinsätze und Punkte fürs nächste 1:1, dazu ein Verlauf mit allem, was erledigt ist. Pro Person gibt es verdeckte Notizen für Entwicklungsgespräche, die erst nach einem Klick erscheinen. Läuft im Browser auf Rechner und Smartphone und lässt sich wie eine App installieren.
 
 Deine Daten liegen in deinem eigenen privaten GitHub-Repository, verschlüsselt mit einem Passwort, das nur du kennst. Es gibt keinen Server und kein Konto beim Teamboard. Die App selbst ist eine statische Webseite aus diesem Repository.
 
@@ -35,7 +35,7 @@ Wer die Seite ausliefert, bestimmt den Code, der deinen Token und dein Passwort 
 
 Jede Änderung landet sofort im Speicher des Geräts und wird ein bis zwei Sekunden später als Commit ins Daten-Repository geschrieben, verschlüsselt mit AES-GCM (Schlüssel aus dem Passwort per PBKDF2, 600.000 Runden). Andere Geräte holen Änderungen spätestens nach 30 Sekunden oder wenn die App in den Vordergrund kommt. Ändern zwei Geräte gleichzeitig, führt die App die Stände pro Eintrag zusammen. Offline gehen Änderungen nicht verloren, sie werden nachgereicht. Die Commit-Historie des Daten-Repositorys enthält jeden früheren Stand.
 
-Entfernst du eine Person aus dem Team, löscht das Teamboard drei Monate später alles zu ihr: Themen, Aufgaben, Abwesenheiten, Projekte und Gesprächspunkte. Bis dahin holst du sie unter „Mehr“ → „Ausgeschiedene“ zurück. Ältere Stände in der Commit-Historie enthalten die Person weiterhin, verschlüsselt.
+Entfernst du eine Person aus dem Team, löscht das Teamboard drei Monate später alles zu ihr: Themen, Aufgaben, Abwesenheiten, Projekte, Gesprächspunkte und Notizen. Bis dahin holst du sie unter „Mehr“ → „Ausgeschiedene“ zurück. Ältere Stände in der Commit-Historie enthalten die Person weiterhin, verschlüsselt.
 
 ## Entwickeln
 

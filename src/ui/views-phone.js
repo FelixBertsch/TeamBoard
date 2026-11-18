@@ -123,5 +123,5 @@ function viewPersonPhone(id,banner=''){
   <div class="m-head"><div class="head-id">${avatar(p,'lg')}<div><p class="overline">${esc(isMe?['Ich',projectLabel('me')].filter(Boolean).join(' · '):arch?`Ausgeschieden am ${dmy(p.archived)}`:(teamLine(p)||'Team'))}</p><h1>${esc(isMe?'Meine Planung':p.name)}</h1></div></div>
     <p class="lead" style="margin-top:12px">${esc(arch?leftText(p):personHeadline(p))}</p></div>
   <div class="m-actions">${arch?`<button class="btn secondary sm" data-action="restore-person" data-id="${id}">Zurück ins Team</button>`:`${isMe?'':`<button class="btn ghost sm" data-action="edit-person" data-id="${id}">Bearbeiten</button>`}<button class="btn secondary sm" data-action="new-absence" data-person="${id}">Abwesenheit</button><button class="btn secondary sm" data-action="new-topic" data-person="${id}">Thema</button>`}</div>
-  <div class="m-stack">${issuesPanel(id)}<section class="card card-pad">${x.tasks}</section>${x.involved}${x.talkPanel}${x.asgPanel}${x.topicsPanel}${x.absPanel}${x.review}</div>`;
+  <div class="m-stack">${issuesPanel(id)}<section class="card card-pad">${x.tasks}</section>${x.involved}${x.talkPanel}${x.asgPanel}${x.topicsPanel}${x.absPanel}${x.review}${x.notes}</div>`;
 }

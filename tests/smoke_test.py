@@ -528,6 +528,89 @@ def sync_flows(b):
     check(not (a.errs or p.errs), "no JavaScript errors during sync " + "; ".join(a.errs + p.errs))
     a_ctx.close(); p_ctx.close()
 
+def notes_flow(browser):
+    """Notes per person: hidden by default, revealed per person, hidden again on leaving, after inactivity and in the background;
+    overview per year with filter and fuzzy search; nowhere else in the board."""
+    for phone in [False, True]:
+        name = "notes-phone" if phone else "notes-desktop"
+        pg = browser.new_page(viewport={"width": 393 if phone else 1920, "height": 852 if phone else 1080},
+                              is_mobile=phone, has_touch=phone, locale="de-DE")
+        errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.clock.install(time="2026-11-18T10:00:00")
+        pg.goto(BASE + "?demo=1&nosw=1#ma-lena"); pg.wait_for_timeout(300)
+        tap = (lambda sel: pg.locator(sel).first.tap()) if phone else (lambda sel: pg.locator(sel).first.click())
+        def act(sel):
+            pg.locator(sel).first.scroll_into_view_if_needed(); tap(sel); pg.wait_for_timeout(120)
+        secret = "Workshop bei Kranich"
+        card = pg.locator(".ncard")
+        check(card.count() == 1 and card.inner_text().split() == "Notizen Anzeigen Verdeckt, bis du sie anzeigst.".split()
+              and secret not in pg.content(), f"[{name}] notes card hidden by default, no text and no count")
+        check(not pg.evaluate("historyEvents().some(e=>e.title.includes('Workshop'))") and secret not in pg.evaluate("document.body.innerHTML"),
+              f"[{name}] notes are not part of the history")
+        act(".ncard [data-action=notes-show]")
+        check(pg.locator(".ncard.notes-open .nrow").count() == 4 and secret in pg.inner_text(".ncard"), f"[{name}] Anzeigen reveals the latest notes")
+        act(".ncard [data-action=new-note]")
+        check(pg.evaluate("document.activeElement.name") == "text", f"[{name}] note form focuses the text field")
+        pg.fill("#dform [name=text]", "Übergabe an Tobias ohne Checkliste, Sorgfalt fehlte.")
+        pg.check("#dform input[name=tone][value=minus]", force=True)
+        pg.locator("#dform button[type=submit]").click(); pg.wait_for_timeout(150)
+        n = pg.evaluate("(n=>n&&[n.personId,n.day,n.tone,!!n.createdAt].join())(TB.state().notes.find(n=>n.text.startsWith('Übergabe')))")
+        check(n == "lena,2026-11-18,minus,true", f"[{name}] note saved with person, date, tone and createdAt")
+        check(pg.locator(".ncard .nrow").first.inner_text().startswith("Übergabe") and "Checkliste" not in pg.evaluate("JSON.stringify(localStorage)"),
+              f"[{name}] new note on top of the card, nothing in localStorage")
+        act(".ncard [data-action=go]")
+        check(pg.evaluate("location.hash") == "#notizen-lena" and pg.locator(".n-page.notes-open").count() == 1, f"[{name}] overview stays revealed for the same person")
+        check(pg.inner_text(".lead") == "2026: 4 Notizen, davon 1 positiv und 2 kritisch.", f"[{name}] year summary counts positive and critical")
+        check(pg.locator(".n-page .grp").evaluate_all("es=>es.map(e=>e.firstChild.textContent)") == ["Juli 2026", "September 2026", "November 2026"],
+              f"[{name}] year from January to December, grouped by month")
+        act("[data-action=notes-year][data-v='-1']")
+        check(pg.locator(".n-page .nrow").count() == 1 and "Einarbeitung" in pg.inner_text(".n-page")
+              and pg.locator("[data-action=notes-year][data-v='-1']").is_disabled(), f"[{name}] previous year, no year before the first note")
+        act("[data-action=notes-year][data-v='1']"); act("[data-action=notes-tone][data-v=minus]")
+        check(pg.locator(".n-page .nrow").count() == 2, f"[{name}] filter Kritisch")
+        act("[data-action=notes-tone][data-v=alle]")
+        pg.locator("#notesSearch").fill("sorgfallt"); pg.wait_for_timeout(120)
+        check(pg.locator(".n-page .nrow").count() == 1 and pg.locator(".n-t mark").count() == 1 and pg.evaluate("document.activeElement.id") == "notesSearch",
+              f"[{name}] search forgives a typo, marks the hit and keeps the field")
+        pg.locator("#notesSearch").fill("aylin einarbeitung"); pg.wait_for_timeout(120)
+        check(pg.locator(".n-page .nrow").count() == 1 and pg.inner_text(".lead") == "Ein Treffer in allen Jahren.", f"[{name}] search covers all years, words in any order")
+        pg.locator("#notesSearch").fill(""); pg.wait_for_timeout(80)
+        if not phone:
+            r = pg.evaluate("""()=>{const t='Regressionstest der Übergabe vergessen, Kundin verärgert.';
+              const f=q=>!!noteHits(t,q);return [f('test'),f('ubergabe'),f('UEBERGABE'),f('kundin verargert'),f('vergesen'),f('regressoinstest'),
+                f('tset'),f('kunde vergessen'),f('fehler'),f('übergabe fehler')]}""")
+            check(r == [True, True, True, True, True, True, False, True, False, False], f"[{name}] fuzzy rules: parts, umlauts, all words, one typo from five letters {r}")
+        # hidden again: leaving the person, reloading the page directly, inactivity, background
+        pg.evaluate("location.hash='ma-jonas'"); pg.wait_for_timeout(120)
+        check(pg.locator(".ncard.notes-open").count() == 0, f"[{name}] another person starts hidden")
+        pg.evaluate("location.hash='ma-lena'"); pg.wait_for_timeout(120)
+        check(pg.locator(".ncard.notes-open").count() == 0 and secret not in pg.content(), f"[{name}] leaving the person hides her notes")
+        act(".ncard [data-action=notes-show]")
+        pg.clock.run_for(4 * 60000); pg.evaluate("document.body.dispatchEvent(new Event('pointerdown',{bubbles:true}))"); pg.clock.run_for(2 * 60000)
+        check(pg.locator(".ncard.notes-open").count() == 1, f"[{name}] input keeps notes open")
+        pg.clock.run_for(5 * 60000 + 20000); pg.wait_for_timeout(80)
+        check(pg.locator(".ncard.notes-open").count() == 0 and secret not in pg.content(), f"[{name}] notes hide after {5} minutes without input")
+        act(".ncard [data-action=notes-show]")
+        pg.evaluate("()=>{Object.defineProperty(document,'hidden',{value:true,configurable:true});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden}")
+        pg.wait_for_timeout(80)
+        check(pg.locator(".ncard.notes-open").count() == 0, f"[{name}] notes hide when the app goes to the background")
+        pg.evaluate("location.hash='notizen-lena'"); pg.reload(); pg.wait_for_timeout(300)
+        check(pg.locator(".n-page").count() == 1 and pg.locator(".n-page.notes-open").count() == 0 and secret not in pg.content(),
+              f"[{name}] opening the overview directly starts hidden")
+        act(".n-page [data-action=notes-show]")
+        SHOTS.mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(SHOTS / f"{name}-page.png"), full_page=True)
+        check(overflow(pg) <= 0, f"[{name}] no horizontal overflow on the overview")
+        act(".n-page .nrow")
+        check(pg.locator("#drawer h3").inner_text() == "Notiz bearbeiten", f"[{name}] a row opens the note")
+        pg.locator("#drawer [data-action=delete]").click(); pg.wait_for_timeout(120)
+        check(pg.evaluate("TB.state().notes.filter(n=>n.personId==='lena').length") == 3 and pg.locator(".n-page .nrow").count() == 2, f"[{name}] delete a note")
+        pg.evaluate("undo()"); pg.wait_for_timeout(120)
+        check(pg.evaluate("TB.state().notes.filter(n=>n.personId==='lena').length") == 4, f"[{name}] undo brings the note back")
+        pg.evaluate("location.hash='ma-lena'"); pg.wait_for_timeout(150)
+        pg.locator(".ncard").scroll_into_view_if_needed(); card.screenshot(path=str(SHOTS / f"{name}-card.png"))
+        check(not errs, f"[{name}] no JavaScript errors " + "; ".join(errs))
+        pg.close()
+
 def important_flow(browser):
     """"Wichtig": current important entries come first, later ones keep their date order; input via #wichtig, form and phone chip."""
     for phone in [False, True]:
@@ -596,9 +679,10 @@ def important_flow(browser):
 
 with sync_playwright() as p:
     b = p.chromium.launch()
-    if ONLY != 'important': todo_display(b)
-    if ONLY != 'todo-display': important_flow(b)
-    if ONLY in ('todo-display', 'important'):
+    if ONLY not in ('important', 'notes'): todo_display(b)
+    if ONLY not in ('todo-display', 'notes'): important_flow(b)
+    if ONLY not in ('todo-display', 'important'): notes_flow(b)
+    if ONLY in ('todo-display', 'important', 'notes'):
         b.close(); srv.shutdown(); sys.exit(1 if fails else 0)
     pg = b.new_page(viewport={"width": 1536, "height": 1000}, locale="de-DE")
     errors = []
@@ -928,7 +1012,7 @@ with sync_playwright() as p:
       S.todos.push({id:'oldm',personId:'old',kind:'mine',title:'x',done:false},{id:'newt',personId:'new',kind:'team',title:'y',done:false},
         {id:'orph',personId:'ghost',kind:'team',title:'z',done:false},{id:'wo',personId:'me',kind:'team',title:'w',done:false,with:['old']});
       S.absences.push({id:'olda',personId:'old',kind:'Urlaub',start:TODAY,end:TODAY});S.talks.push({id:'oldk',personId:'old',text:'k',done:false});
-      S.assignments.push({id:'olds',personId:'old',project:'P',start:TODAY,end:null,billable:true});
+      S.assignments.push({id:'olds',personId:'old',project:'P',start:TODAY,end:null,billable:true});S.notes.push({id:'oldn',personId:'old',day:TODAY,text:'n'});
       S.acks.push({id:'abs-oldt',sig:TODAY,items:[]},{id:'asg-olds',sig:TODAY,items:[]},{id:'abs-wt',sig:TODAY,items:[]});save();
       const n=applyExpiry(),all=PERSON_LISTS.flatMap(k=>S[k]);
       return [n,!S.people.some(p=>p.id==='old'),!all.some(x=>x.personId==='old'||x.personId==='ghost'),S.topics.find(t=>t.id==='wt').with.join(),
