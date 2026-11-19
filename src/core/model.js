@@ -8,7 +8,7 @@ function demo(){
     {id:'aylin',name:'Aylin Demir',team:'Plattform'},{id:'tobias',name:'Tobias Krüger',team:'Kundenportal'},
     {id:'mira',name:'Mira Schulz',team:'Qualität'}];
   const contacts=[{id:'kmark',name:'Mark Becker'},{id:'kthomas',name:'Thomas Wagner'}];
-  const tp=(personId,title,s,e,status,note='')=>({id:uid(),personId,title,start:d(s),end:d(e),status,note});
+  let tn=0;const tp=(personId,title,s,e,status,note='')=>({id:'demo-t'+(tn++),personId,title,start:d(s),end:d(e),status,note}); // stable ids: a late topic stays the same red issue after a reload
   const topics=[tp('me','Budget 2027 abstimmen',-14,-3,'erledigt'),tp('me','Quartalsplanung Q1',-7,11,'aktiv'),
     tp('me','Recruiting Senior Backend',7,32,'geplant'),
     {...tp('lena','Payment-API v2',-14,11,'aktiv','Go-live mit Partnerbank geplant, Lasttests durch Mira vorher.'),with:['mira'],important:true},

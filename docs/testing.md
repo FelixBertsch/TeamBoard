@@ -25,4 +25,5 @@ Things that make tests flaky:
 
 - **The toast covers the bottom edge** for 6 seconds. Scroll elements to the center before clicking.
 - **A focused quick field shows its preview** (`.qprev`). Clicking elsewhere blurs it, the preview collapses and everything below moves up between mousedown and mouseup, so the click misses. Blur the field first (`document.activeElement.blur()`).
+- **Demo data is new on every load**, with new ids. Demo topics keep stable ids (`demo-t<n>`), so a topic that is late from Thursday on (Tobias's DATEV topic) stays the same red issue after a reload and "Zu klären" stays folded.
 - **Touch scrolling has momentum.** After a swipe in the sideways team grid, wait and reset `scrollLeft` before measuring a bar again.
