@@ -23,6 +23,8 @@ document.addEventListener('click',async e=>{
       case'notes-show':showNotes(a.dataset.person);break;
       case'notes-hide':hideNotes();render();break;
       case'new-note':openNote(null,{personId:a.dataset.person});break;
+      case'note-add':addNote(a.dataset.person);break;
+      case'note-tone':{const p=a.dataset.person;ui.notes.draft[p]=ui.notes.draft[p]===a.dataset.v?'':a.dataset.v;render();break}
       case'edit-note':openNote(id);break;
       case'notes-year':ui.notes.year=(ui.notes.year??+TODAY.slice(0,4))+(+a.dataset.v);render();break;
       case'notes-tone':ui.notes.tone=a.dataset.v;render();break;
@@ -138,6 +140,7 @@ document.addEventListener('keydown',e=>{
   }
   if(e.target.id==='quick'){if(e.key==='Enter'){e.preventDefault();quickAdd()}
     if(e.key==='Escape'){e.target.value='';$('#qprev').innerHTML=previewHTML('');e.target.blur()}return}
+  if(e.target.dataset?.add==='note'&&e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();addNote(e.target.dataset.person);return}
   if(e.target.dataset?.add==='talk'&&e.key==='Enter'){const text=e.target.value.trim();if(!text)return;
     e.target.value='';S.talks.push(newEntry({personId:e.target.dataset.person,text,done:false}));save();render();$('.inline-add')?.focus();return}
   if((e.key==='Enter'||e.key===' ')&&e.target.classList){

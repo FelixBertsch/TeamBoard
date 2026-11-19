@@ -1,7 +1,7 @@
 /* Notes per team member („Notizen“): what the user noticed about a person, with a date and optionally „Positiv“ or „Kritisch“,
    for development talks years later. Nothing else reads them: not the history, the review, "Zu klären", the timeline or the tour.
    Hidden by default. The card on the person page (notesCard()) and the page #notizen-<id> (viewNotes()) show no content, not
-   even a count, until „Anzeigen“. They hide again when the route leaves this person (notesRoute(), on hashchange), after
+   even a count, until „Anzeigen“. The card's input field is there in both states: writing a note reveals nothing. They hide again when the route leaves this person (notesRoute(), on hashchange), after
    CFG.notesHideMinutes without a click or key press, and when the app goes to the background. The reveal lives in `ui.notes`
    only, never in localStorage. The note field is plain text: no suggestion list, no browser autocomplete. */
 const NOTE_TONES=[['','Ohne'],['plus','Positiv'],['minus','Kritisch']];
@@ -46,15 +46,27 @@ const noteIc=n=>`<span class="h-ic n-ic${n.tone?' on':''}" role="img" aria-label
 const noteRow=(n,day,hits=null)=>`<button class="hrow nrow" data-action="edit-note" data-id="${n.id}">${noteIc(n)}<span class="h-body"><span class="n-t">${markText(n.text,hits)}</span></span><span class="h-d">${esc(day)}</span></button>`;
 const hiddenNote=`<p class="empty n-hidden">${ic('eyeOff',18)}<span>Verdeckt, bis du sie anzeigst.</span></p>`;
 
-/* Card on the person page: hidden, or the five latest notes with links to write one, to the overview and to hide them. */
-function notesCard(pid){
-  if(!notesOpen(pid))return`<section class="card card-pad ncard"><div class="panel-head"><h2 class="h4">Notizen</h2><button class="link-btn" data-action="notes-show" data-person="${pid}">Anzeigen</button></div>${hiddenNote}</section>`;
+/* Input in the card, hidden or not: text, optional „Positiv“/„Kritisch“ (kept in ui.notes.draft per person, so a re-render keeps
+   it), „Speichern“ or Ctrl+Enter. The note gets today's date; the form of a saved note changes it. render() keeps the text
+   (data-add + data-person). */
+function noteInput(pid){const t=ui.notes.draft[pid]||'',f=firstName(personOf(pid));
+  return`<div class="n-add"><textarea class="n-in" data-add="note" data-person="${pid}" rows="2" placeholder="${isPhone()?'Notiz schreiben':'Notiz schreiben, Strg+Enter speichert'}" aria-label="Notiz zu ${esc(f)} schreiben" autocomplete="off"></textarea>
+    <div class="n-add-row"><div class="tags" role="group" aria-label="Einordnung">${['plus','minus'].map(v=>`<button type="button" class="tag" data-action="note-tone" data-person="${pid}" data-v="${v}" aria-pressed="${t===v}">${ic(NOTE_IC[v],16,2.25)}${toneLabel(v)}</button>`).join('')}</div>
+    <button type="button" class="btn secondary sm" data-action="note-add" data-person="${pid}">Speichern</button></div></div>`}
+/* Saves the card's input as a note of today. The card stays as it is: a hidden card stays hidden, the toast names no text. */
+function addNote(pid){const el=$(`#main [data-add=note][data-person="${pid}"]`),text=(el?.value||'').trim();
+  if(!text){toast('Bitte schreib zuerst eine Notiz.');el?.focus();return}
+  const tone=ui.notes.draft[pid];S.notes.push(newEntry({personId:pid,day:TODAY,text,...(tone?{tone}:{})}));delete ui.notes.draft[pid];
+  el.value='';save();render();toast('Notiz gespeichert',true)}
+/* Card on the person page: the input, then hidden, or the five latest notes and a link to the overview. */
+function notesCard(pid){const open=notesOpen(pid);
+  const head=`<div class="panel-head"><h2 class="h4">Notizen</h2><button class="link-btn" data-action="${open?'notes-hide':'notes-show'}" data-person="${pid}">${open?'Verdecken':'Anzeigen'}</button></div>`;
+  if(!open)return`<section class="card card-pad ncard">${head}${noteInput(pid)}${hiddenNote}</section>`;
   const list=notesOf(pid).sort(noteSort).reverse(),last=list.slice(0,5),y=TODAY.slice(0,4);
   const rows=last.length?last.map(n=>noteRow(n,n.day.startsWith(y)?dm(n.day):dmy(n.day))).join('')
-    :`<p class="empty">Noch keine Notizen zu ${esc(firstName(personOf(pid)))}. „Schreiben“ legt die erste an.</p>`;
-  return`<section class="card card-pad ncard notes-open"><div class="panel-head"><h2 class="h4">Notizen</h2><button class="link-btn" data-action="new-note" data-person="${pid}">Schreiben</button></div>
-    <div class="n-list">${rows}</div><div class="n-foot">${list.length?`<button class="link-btn" data-action="go" data-v="notizen-${pid}">${list.length>last.length?`Alle ${list.length} im Überblick ansehen`:'Im Überblick ansehen'}</button>`:''}
-    <span class="sp"></span><button class="link-btn" data-action="notes-hide">Verdecken</button></div></section>`;
+    :`<p class="empty">Noch keine Notizen zu ${esc(firstName(personOf(pid)))}.</p>`;
+  return`<section class="card card-pad ncard notes-open">${head}${noteInput(pid)}<div class="n-list">${rows}</div>
+    ${list.length?`<div class="n-foot"><button class="link-btn" data-action="go" data-v="notizen-${pid}">${list.length>last.length?`Alle ${list.length} im Überblick ansehen`:'Im Überblick ansehen'}</button></div>`:''}</section>`;
 }
 
 /* "2026: 14 Notizen, davon 8 positiv und 3 kritisch." */

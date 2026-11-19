@@ -543,21 +543,28 @@ def notes_flow(browser):
             pg.locator(sel).first.scroll_into_view_if_needed(); tap(sel); pg.wait_for_timeout(120)
         secret = "Workshop bei Kranich"
         card = pg.locator(".ncard")
-        check(card.count() == 1 and card.inner_text().split() == "Notizen Anzeigen Verdeckt, bis du sie anzeigst.".split()
-              and secret not in pg.content(), f"[{name}] notes card hidden by default, no text and no count")
+        check(card.count() == 1 and card.inner_text().split() == "Notizen Anzeigen Positiv Kritisch Speichern Verdeckt, bis du sie anzeigst.".split()
+              and secret not in pg.content(), f"[{name}] notes card hidden by default, no text and no count, input visible")
         check(not pg.evaluate("historyEvents().some(e=>e.title.includes('Workshop'))") and secret not in pg.evaluate("document.body.innerHTML"),
               f"[{name}] notes are not part of the history")
-        act(".ncard [data-action=notes-show]")
-        check(pg.locator(".ncard.notes-open .nrow").count() == 4 and secret in pg.inner_text(".ncard"), f"[{name}] Anzeigen reveals the latest notes")
-        act(".ncard [data-action=new-note]")
-        check(pg.evaluate("document.activeElement.name") == "text", f"[{name}] note form focuses the text field")
-        pg.fill("#dform [name=text]", "Übergabe an Tobias ohne Checkliste, Sorgfalt fehlte.")
-        pg.check("#dform input[name=tone][value=minus]", force=True)
-        pg.locator("#dform button[type=submit]").click(); pg.wait_for_timeout(150)
+        # writing while hidden: text and rating survive a re-render, saving keeps the card hidden
+        field = ".ncard [data-add=note]"
+        pg.locator(field).fill("Übergabe an Tobias ohne Checkliste, Sorgfalt fehlte.")
+        act(".ncard [data-action=note-tone][data-v=minus]"); pg.evaluate("render()")
+        check(pg.input_value(field).startswith("Übergabe") and pg.get_attribute(".ncard [data-action=note-tone][data-v=minus]", "aria-pressed") == "true",
+              f"[{name}] input keeps text and rating across render()")
+        act(".ncard [data-action=note-add]")
         n = pg.evaluate("(n=>n&&[n.personId,n.day,n.tone,!!n.createdAt].join())(TB.state().notes.find(n=>n.text.startsWith('Übergabe')))")
-        check(n == "lena,2026-11-18,minus,true", f"[{name}] note saved with person, date, tone and createdAt")
-        check(pg.locator(".ncard .nrow").first.inner_text().startswith("Übergabe") and "Checkliste" not in pg.evaluate("JSON.stringify(localStorage)"),
-              f"[{name}] new note on top of the card, nothing in localStorage")
+        check(n == "lena,2026-11-18,minus,true", f"[{name}] note from the card saved with person, today, rating and createdAt")
+        check(pg.locator(".ncard.notes-open").count() == 0 and "Checkliste" not in pg.content() and pg.input_value(field) == ""
+              and pg.get_attribute(".ncard [data-action=note-tone][data-v=minus]", "aria-pressed") == "false"
+              and pg.inner_text("#toast").startswith("Notiz gespeichert"), f"[{name}] saving while hidden keeps the card hidden and clears the input")
+        act(".ncard [data-action=note-add]")
+        check(pg.evaluate("TB.state().notes.length") == 7 and "zuerst eine Notiz" in pg.inner_text("#toast"), f"[{name}] an empty input saves nothing")
+        check("Checkliste" not in pg.evaluate("JSON.stringify(localStorage)"), f"[{name}] nothing in localStorage")
+        act(".ncard [data-action=notes-show]")
+        check(pg.locator(".ncard.notes-open .nrow").count() == 5 and secret in pg.inner_text(".ncard")
+              and pg.locator(".ncard .nrow").first.inner_text().startswith("Übergabe"), f"[{name}] Anzeigen reveals the latest notes, the new one on top")
         act(".ncard [data-action=go]")
         check(pg.evaluate("location.hash") == "#notizen-lena" and pg.locator(".n-page.notes-open").count() == 1, f"[{name}] overview stays revealed for the same person")
         check(pg.inner_text(".lead") == "2026: 4 Notizen, davon 1 positiv und 2 kritisch.", f"[{name}] year summary counts positive and critical")
@@ -598,6 +605,9 @@ def notes_flow(browser):
         check(pg.locator(".n-page").count() == 1 and pg.locator(".n-page.notes-open").count() == 0 and secret not in pg.content(),
               f"[{name}] opening the overview directly starts hidden")
         act(".n-page [data-action=notes-show]")
+        act("[data-action=new-note]")
+        check(pg.evaluate("document.activeElement.name") == "text" and pg.locator("#drawer [name=day]").count() == 1, f"[{name}] Notiz schreiben opens the form with text and date")
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(100)
         SHOTS.mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(SHOTS / f"{name}-page.png"), full_page=True)
         check(overflow(pg) <= 0, f"[{name}] no horizontal overflow on the overview")
         act(".n-page .nrow")
@@ -608,6 +618,10 @@ def notes_flow(browser):
         check(pg.evaluate("TB.state().notes.filter(n=>n.personId==='lena').length") == 4, f"[{name}] undo brings the note back")
         pg.evaluate("location.hash='ma-lena'"); pg.wait_for_timeout(150)
         pg.locator(".ncard").scroll_into_view_if_needed(); card.screenshot(path=str(SHOTS / f"{name}-card.png"))
+        if not phone:
+            pg.locator(".ncard [data-add=note]").fill("Kurz notiert"); pg.locator(".ncard [data-add=note]").press("Control+Enter"); pg.wait_for_timeout(120)
+            check(pg.evaluate("(n=>!!n&&!n.tone)(TB.state().notes.find(n=>n.text==='Kurz notiert'))") and pg.evaluate("document.activeElement.dataset.add") == "note",
+                  f"[{name}] Ctrl+Enter saves the input without a rating and keeps the focus")
         check(not errs, f"[{name}] no JavaScript errors " + "; ".join(errs))
         pg.close()
 

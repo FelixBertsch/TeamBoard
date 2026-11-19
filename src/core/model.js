@@ -96,7 +96,7 @@ const ui={boards:{},keepIss:{},showAcked:false,absAll:false,filter:'alle',tab:{}
   hist:{type:'alle',pid:'',q:'',weeks:8},year:{}, // hist: filters of the history view; year: review year per person
   fold:{todos:true,issues:true,abs:false,talk:false},redSeen:[],grp:{}, // phone "Heute": open cards, red issues seen when folding, open todo groups
   toff:0,tday:null,lgX:null, // phone team grid: week offset and tapped day upright, scroll position sideways
-  notes:{pid:null,at:0,q:'',tone:'alle',year:null}}; // notes.js: revealed person (memory only), last input, search, filter, year
+  notes:{pid:null,at:0,q:'',tone:'alle',year:null,draft:{}}}; // notes.js: revealed person (memory only), last input, search, filter, year, rating of the card input per person
 try{const u=JSON.parse(localStorage.getItem(KEY+'.ui')||'{}');if(['week','two','six'].includes(u.range))ui.range=u.range;
   if(u.fold&&typeof u.fold==='object')Object.assign(ui.fold,u.fold);if(Array.isArray(u.redSeen))ui.redSeen=u.redSeen}catch(e){}
 

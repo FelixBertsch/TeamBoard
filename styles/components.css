@@ -525,7 +525,14 @@ details.rv .prow{padding-left:108px}
 .ncard .n-t{font-size:15px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .ncard .n-list{display:grid;gap:2px}
 .n-foot{display:flex;align-items:center;gap:12px;padding-top:10px;margin-top:8px;border-top:1px solid var(--border-subtle)}
-.n-foot .sp{flex:1}
+.n-add{display:grid;gap:10px;margin-bottom:12px}
+.n-in{width:100%;min-height:72px;max-height:320px;field-sizing:content;resize:vertical;padding:11px 14px;border:2px solid var(--field-border);border-radius:12px;
+  background:var(--surface-card);font-size:16px;line-height:1.5;color:var(--text-body)}
+.n-in:focus{outline:none;border-color:var(--accent);box-shadow:var(--shadow-focus)}
+.n-in::placeholder{color:var(--text-subtle)}
+.n-add-row{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.n-add-row .btn{margin-left:auto}
+.n-add .tag{gap:6px}
 .n-bar{display:flex;gap:12px 20px;align-items:center;flex-wrap:wrap}
 .n-year b{min-width:52px;text-align:center;font-size:18px;font-weight:800;color:var(--text-strong);font-variant-numeric:tabular-nums}
 .n-t mark{background:var(--navy-100);color:var(--text-strong);font-weight:800;border-radius:4px;padding:0 1px}
