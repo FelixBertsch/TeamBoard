@@ -543,12 +543,18 @@ def notes_flow(browser):
             pg.locator(sel).first.scroll_into_view_if_needed(); tap(sel); pg.wait_for_timeout(120)
         secret = "Workshop bei Kranich"
         card = pg.locator(".ncard")
-        check(card.count() == 1 and card.inner_text().split() == "Notizen Anzeigen Positiv Kritisch Speichern Verdeckt, bis du sie anzeigst.".split()
-              and secret not in pg.content(), f"[{name}] notes card hidden by default, no text and no count, input visible")
+        chips = ".ncard .n-add-row"
+        check(card.count() == 1 and card.inner_text().split() == ["Notizen", "Anzeigen"] and pg.locator(".ncard .n-in").is_visible()
+              and not pg.locator(chips).is_visible() and secret not in pg.content() and "Verdeckt" not in pg.content(),
+              f"[{name}] idle card: only title, Anzeigen and the empty field, no rating, no hint at hidden notes")
         check(not pg.evaluate("historyEvents().some(e=>e.title.includes('Workshop'))") and secret not in pg.evaluate("document.body.innerHTML"),
               f"[{name}] notes are not part of the history")
         # writing while hidden: text and rating survive a re-render, saving keeps the card hidden
         field = ".ncard [data-add=note]"
+        pg.locator(field).focus(); pg.wait_for_timeout(50)
+        check(pg.locator(chips).is_visible() and pg.inner_text(chips).split() == ["Stärke", "Entwicklungsfeld", "Speichern"], f"[{name}] rating and Speichern show while writing")
+        pg.evaluate("document.activeElement.blur()"); pg.wait_for_timeout(350)
+        check(not pg.locator(chips).is_visible(), f"[{name}] they go again when the empty field loses focus")
         pg.locator(field).fill("Übergabe an Tobias ohne Checkliste, Sorgfalt fehlte.")
         act(".ncard [data-action=note-tone][data-v=minus]"); pg.evaluate("render()")
         check(pg.input_value(field).startswith("Übergabe") and pg.get_attribute(".ncard [data-action=note-tone][data-v=minus]", "aria-pressed") == "true",
@@ -558,8 +564,9 @@ def notes_flow(browser):
         check(n == "lena,2026-11-18,minus,true", f"[{name}] note from the card saved with person, today, rating and createdAt")
         check(pg.locator(".ncard.notes-open").count() == 0 and "Checkliste" not in pg.content() and pg.input_value(field) == ""
               and pg.get_attribute(".ncard [data-action=note-tone][data-v=minus]", "aria-pressed") == "false"
-              and pg.inner_text("#toast").startswith("Notiz gespeichert"), f"[{name}] saving while hidden keeps the card hidden and clears the input")
-        act(".ncard [data-action=note-add]")
+              and pg.inner_text("#toast").startswith("Notiz gespeichert") and not pg.locator(chips).is_visible(),
+              f"[{name}] saving while hidden keeps the card hidden, clears the input and hides the rating")
+        pg.locator(field).focus(); act(".ncard [data-action=note-add]")
         check(pg.evaluate("TB.state().notes.length") == 7 and "zuerst eine Notiz" in pg.inner_text("#toast"), f"[{name}] an empty input saves nothing")
         check("Checkliste" not in pg.evaluate("JSON.stringify(localStorage)"), f"[{name}] nothing in localStorage")
         act(".ncard [data-action=notes-show]")
@@ -567,7 +574,7 @@ def notes_flow(browser):
               and pg.locator(".ncard .nrow").first.inner_text().startswith("Übergabe"), f"[{name}] Anzeigen reveals the latest notes, the new one on top")
         act(".ncard [data-action=go]")
         check(pg.evaluate("location.hash") == "#notizen-lena" and pg.locator(".n-page.notes-open").count() == 1, f"[{name}] overview stays revealed for the same person")
-        check(pg.inner_text(".lead") == "2026: 4 Notizen, davon 1 positiv und 2 kritisch.", f"[{name}] year summary counts positive and critical")
+        check(pg.inner_text(".lead") == "2026: 4 Notizen, davon eine Stärke und 2 Entwicklungsfelder.", f"[{name}] year summary counts strengths and development areas")
         check(pg.locator(".n-page .grp").evaluate_all("es=>es.map(e=>e.firstChild.textContent)") == ["Juli 2026", "September 2026", "November 2026"],
               f"[{name}] year from January to December, grouped by month")
         act("[data-action=notes-year][data-v='-1']")
@@ -606,7 +613,8 @@ def notes_flow(browser):
               f"[{name}] opening the overview directly starts hidden")
         act(".n-page [data-action=notes-show]")
         act("[data-action=new-note]")
-        check(pg.evaluate("document.activeElement.name") == "text" and pg.locator("#drawer [name=day]").count() == 1, f"[{name}] Notiz schreiben opens the form with text and date")
+        check(pg.evaluate("document.activeElement.name") == "text" and pg.locator("#drawer [name=day]").count() == 1
+              and "Ohne Stärke Entwicklungsfeld" in " ".join(pg.inner_text("#drawer").split()), f"[{name}] Notiz schreiben opens the form with text, rating and date")
         pg.keyboard.press("Escape"); pg.wait_for_timeout(100)
         SHOTS.mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(SHOTS / f"{name}-page.png"), full_page=True)
         check(overflow(pg) <= 0, f"[{name}] no horizontal overflow on the overview")

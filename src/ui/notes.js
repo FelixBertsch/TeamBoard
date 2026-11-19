@@ -1,12 +1,13 @@
-/* Notes per team member („Notizen“): what the user noticed about a person, with a date and optionally „Positiv“ or „Kritisch“,
+/* Notes per team member („Notizen“): what the user noticed about a person, with a date and optionally „Stärke“ or „Entwicklungsfeld“,
    for development talks years later. Nothing else reads them: not the history, the review, "Zu klären", the timeline or the tour.
    Hidden by default. The card on the person page (notesCard()) and the page #notizen-<id> (viewNotes()) show no content, not
-   even a count, until „Anzeigen“. The card's input field is there in both states: writing a note reveals nothing. They hide again when the route leaves this person (notesRoute(), on hashchange), after
+   even a count, until „Anzeigen“, and do not say that anything is hidden. The card's input field is there in both states:
+   writing a note reveals nothing. Its rating chips show only while writing, so an idle card does not tell that notes rate people. They hide again when the route leaves this person (notesRoute(), on hashchange), after
    CFG.notesHideMinutes without a click or key press, and when the app goes to the background. The reveal lives in `ui.notes`
    only, never in localStorage. The note field is plain text: no suggestion list, no browser autocomplete. */
-const NOTE_TONES=[['','Ohne'],['plus','Positiv'],['minus','Kritisch']];
-const NOTE_IC={plus:'thumbsUp',minus:'thumbsDown'};
-const toneLabel=t=>t==='plus'?'Positiv':t==='minus'?'Kritisch':'Ohne Einordnung';
+const NOTE_TONES=[['','Ohne'],['plus','Stärke'],['minus','Entwicklungsfeld']];
+const NOTE_IC={plus:'star',minus:'sprout'};
+const toneLabel=t=>t==='plus'?'Stärke':t==='minus'?'Entwicklungsfeld':'Ohne Einordnung';
 const notesOf=pid=>S.notes.filter(n=>n.personId===pid);
 const noteSort=(a,b)=>a.day.localeCompare(b.day)||(a.createdAt||'').localeCompare(b.createdAt||'');
 const notesOpen=pid=>!!pid&&ui.notes.pid===pid;
@@ -44,15 +45,18 @@ function markText(text,ranges){if(!ranges?.length)return esc(text);let h='',pos=
 
 const noteIc=n=>`<span class="h-ic n-ic${n.tone?' on':''}" role="img" aria-label="${toneLabel(n.tone)}" title="${toneLabel(n.tone)}">${ic(NOTE_IC[n.tone]||'note',16,2.25)}</span>`;
 const noteRow=(n,day,hits=null)=>`<button class="hrow nrow" data-action="edit-note" data-id="${n.id}">${noteIc(n)}<span class="h-body"><span class="n-t">${markText(n.text,hits)}</span></span><span class="h-d">${esc(day)}</span></button>`;
-const hiddenNote=`<p class="empty n-hidden">${ic('eyeOff',18)}<span>Verdeckt, bis du sie anzeigst.</span></p>`;
 
-/* Input in the card, hidden or not: text, optional „Positiv“/„Kritisch“ (kept in ui.notes.draft per person, so a re-render keeps
-   it), „Speichern“ or Ctrl+Enter. The note gets today's date; the form of a saved note changes it. render() keeps the text
-   (data-add + data-person). */
+/* Input in the card, hidden or not: text, optional „Stärke“/„Entwicklungsfeld“ (kept in ui.notes.draft per person, so a re-render
+   keeps it), „Speichern“ or Ctrl+Enter. The note gets today's date; the form of a saved note changes it. render() keeps the text
+   (data-add + data-person). Chips and „Speichern“ show only while writing: while the field has focus (class `on`, removed a
+   moment after leaving so a tap on a chip still lands), holds text or a chip is picked (CSS). */
 function noteInput(pid){const t=ui.notes.draft[pid]||'',f=firstName(personOf(pid));
-  return`<div class="n-add"><textarea class="n-in" data-add="note" data-person="${pid}" rows="2" placeholder="${isPhone()?'Notiz schreiben':'Notiz schreiben, Strg+Enter speichert'}" aria-label="Notiz zu ${esc(f)} schreiben" autocomplete="off"></textarea>
+  return`<div class="n-add${t?' on':''}"><textarea class="n-in" data-add="note" data-person="${pid}" rows="2" placeholder="${isPhone()?'Notiz schreiben':'Notiz schreiben, Strg+Enter speichert'}" aria-label="Notiz zu ${esc(f)} schreiben" autocomplete="off"></textarea>
     <div class="n-add-row"><div class="tags" role="group" aria-label="Einordnung">${['plus','minus'].map(v=>`<button type="button" class="tag" data-action="note-tone" data-person="${pid}" data-v="${v}" aria-pressed="${t===v}">${ic(NOTE_IC[v],16,2.25)}${toneLabel(v)}</button>`).join('')}</div>
     <button type="button" class="btn secondary sm" data-action="note-add" data-person="${pid}">Speichern</button></div></div>`}
+document.addEventListener('focusin',e=>{const b=e.target.closest?.('.n-add');if(b)b.classList.add('on')});
+document.addEventListener('focusout',e=>{const b=e.target.closest?.('.n-add');if(b)setTimeout(()=>{
+  if(!b.contains(document.activeElement))b.classList.toggle('on',!!b.querySelector('.n-in').value.trim()||!!b.querySelector('[aria-pressed=true]'))},250)});
 /* Saves the card's input as a note of today. The card stays as it is: a hidden card stays hidden, the toast names no text. */
 function addNote(pid){const el=$(`#main [data-add=note][data-person="${pid}"]`),text=(el?.value||'').trim();
   if(!text){toast('Bitte schreib zuerst eine Notiz.');el?.focus();return}
@@ -61,7 +65,7 @@ function addNote(pid){const el=$(`#main [data-add=note][data-person="${pid}"]`),
 /* Card on the person page: the input, then hidden, or the five latest notes and a link to the overview. */
 function notesCard(pid){const open=notesOpen(pid);
   const head=`<div class="panel-head"><h2 class="h4">Notizen</h2><button class="link-btn" data-action="${open?'notes-hide':'notes-show'}" data-person="${pid}">${open?'Verdecken':'Anzeigen'}</button></div>`;
-  if(!open)return`<section class="card card-pad ncard">${head}${noteInput(pid)}${hiddenNote}</section>`;
+  if(!open)return`<section class="card card-pad ncard">${head}${noteInput(pid)}</section>`;
   const list=notesOf(pid).sort(noteSort).reverse(),last=list.slice(0,5),y=TODAY.slice(0,4);
   const rows=last.length?last.map(n=>noteRow(n,n.day.startsWith(y)?dm(n.day):dmy(n.day))).join('')
     :`<p class="empty">Noch keine Notizen zu ${esc(firstName(personOf(pid)))}.</p>`;
@@ -69,17 +73,18 @@ function notesCard(pid){const open=notesOpen(pid);
     ${list.length?`<div class="n-foot"><button class="link-btn" data-action="go" data-v="notizen-${pid}">${list.length>last.length?`Alle ${list.length} im Überblick ansehen`:'Im Überblick ansehen'}</button></div>`:''}</section>`;
 }
 
-/* "2026: 14 Notizen, davon 8 positiv und 3 kritisch." */
+/* "2026: 14 Notizen, davon 8 Stärken und 3 Entwicklungsfelder." */
 function yearSummary(list,y){const n=list.length,p=list.filter(x=>x.tone==='plus').length,m=list.filter(x=>x.tone==='minus').length;
-  if(!n)return`${y}: keine Notizen.`;if(n===1)return`${y}: eine ${p?'positive ':m?'kritische ':''}Notiz.`;
-  const parts=[p?`${p} positiv`:'',m?`${m} kritisch`:''].filter(Boolean).join(' und ');return`${y}: ${n} Notizen${parts?`, davon ${parts}`:''}.`}
+  if(!n)return`${y}: keine Notizen.`;
+  const parts=[p?(p===1?'eine Stärke':`${p} Stärken`):'',m?(m===1?'ein Entwicklungsfeld':`${m} Entwicklungsfelder`):''].filter(Boolean).join(' und ');
+  return`${y}: ${n===1?'eine Notiz':`${n} Notizen`}${parts?`, davon ${parts}`:''}.`}
 
 /* Overview page #notizen-<id>, for the yearly talk: one year at a time from January to December, grouped by month, filter by
-   „Positiv“/„Kritisch“, search across all years. Same markup on desktop and phone. */
+   „Stärken“/„Entwicklungsfelder“, search across all years. Same markup on desktop and phone. */
 function viewNotes(pid,banner=''){
   const p=personOf(pid),f=firstName(p),open=notesOpen(pid),phone=isPhone(),n=ui.notes;
   let lead='',body;
-  if(!open)body=`<section class="card card-pad n-page">${hiddenNote}<button class="btn secondary" data-action="notes-show" data-person="${pid}">${ic('eye',18)}Anzeigen</button></section>`;
+  if(!open)body=`<section class="card card-pad n-page"><button class="btn secondary" data-action="notes-show" data-person="${pid}">${ic('eye',18)}Anzeigen</button></section>`;
   else{
     const all=notesOf(pid),cur=+TODAY.slice(0,4),years=all.map(x=>+x.day.slice(0,4)),minY=Math.min(cur,...years),maxY=Math.max(cur,...years);
     const y=Math.min(maxY,Math.max(minY,n.year??cur)),q=n.q.trim(),inYear=all.filter(x=>x.day.startsWith(String(y))),hits=new Map();
@@ -91,10 +96,10 @@ function viewNotes(pid,banner=''){
     let list=[...groups].map(([k,xs])=>`<div class="grp">${MON[+k.slice(5)-1]} ${k.slice(0,4)}<span class="n">${xs.length}</span></div>`
       +xs.map(x=>noteRow(x,`${WD[wdOf(dn(x.day))]} ${dm(x.day)}`,hits.get(x.id))).join('')).join('');
     if(!list)list=`<p class="empty">${!all.length?`Noch keine Notizen zu ${esc(f)}. „Notiz schreiben“ legt die erste an.`
-      :q?'Nichts gefunden für diese Suche.':`Aus ${y} gibt es ${n.tone==='plus'?'keine positiven':n.tone==='minus'?'keine kritischen':'keine'} Notizen.`}</p>`;
+      :q?'Nichts gefunden für diese Suche.':`Aus ${y} gibt es ${n.tone==='plus'?'keine Stärken':n.tone==='minus'?'keine Entwicklungsfelder':'keine Notizen'}.`}</p>`;
     const pager=q?'':`<div class="pager n-year"><button class="icon-btn" data-action="notes-year" data-v="-1" aria-label="Vorjahr"${y<=minY?' disabled':''}>${ic('chevL',20)}</button>
       <b>${y}</b><button class="icon-btn" data-action="notes-year" data-v="1" aria-label="Folgejahr"${y>=maxY?' disabled':''}>${ic('chevR',20)}</button></div>`;
-    const tags=`<div class="tags" role="group" aria-label="Einordnung">${[['alle','Alle'],['plus','Positiv'],['minus','Kritisch']].map(([v,l])=>`<button class="tag" data-action="notes-tone" data-v="${v}" aria-pressed="${n.tone===v}">${l}</button>`).join('')}</div>`;
+    const tags=`<div class="tags" role="group" aria-label="Einordnung">${[['alle','Alle'],['plus','Stärken'],['minus','Entwicklungsfelder']].map(([v,l])=>`<button class="tag" data-action="notes-tone" data-v="${v}" aria-pressed="${n.tone===v}">${l}</button>`).join('')}</div>`;
     body=`<section class="card card-pad hist n-page notes-open"><div class="hist-ctl"><div class="n-bar">${pager}${tags}</div>
       <label class="hist-q">${ic('search',18)}<input id="notesSearch" type="search" value="${esc(n.q)}" placeholder="In allen Jahren suchen" aria-label="Notizen durchsuchen" autocomplete="off" spellcheck="false" enterkeyhint="search"></label></div>${list}</section>`;
   }
@@ -105,7 +110,7 @@ function viewNotes(pid,banner=''){
     <div class="actions"><button class="btn ghost" data-action="go" data-v="ma-${pid}">Zur Personenseite</button>${acts}</div></div>${lead?`<p class="lead">${esc(lead)}</p>`:''}${body}</div>`;
 }
 
-/* Form for a note: text, „Einordnung“ (none, „Positiv“, „Kritisch“) and the day it happened. */
+/* Form for a note: text, „Einordnung“ (none, „Stärke“, „Entwicklungsfeld“) and the day it happened. */
 function openNote(id,preset={}){
   const ex=id?S.notes.find(x=>x.id===id):null;if(id&&!ex)return;
   const pid=ex?ex.personId:preset.personId,n=ex||{day:TODAY,text:'',tone:''};

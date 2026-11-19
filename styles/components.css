@@ -513,10 +513,6 @@ details.rv .prow{padding-left:108px}
 .rv-foot{padding-top:10px;border-top:1px solid var(--border-subtle)}
 
 /* Notes („Notizen“, notes.js): card on the person page and page #notizen-<id>. Hidden state, rows with full text. */
-.n-hidden{display:flex;gap:10px;align-items:center}
-.n-hidden .ic{flex:none;color:var(--text-subtle)}
-.n-page .n-hidden{padding-top:0}
-.n-page>.btn{margin-top:8px}
 .nrow{align-items:flex-start}
 .nrow .h-body{padding-top:5px}
 .nrow .h-d{padding-top:6px}
@@ -530,7 +526,8 @@ details.rv .prow{padding-left:108px}
   background:var(--surface-card);font-size:16px;line-height:1.5;color:var(--text-body)}
 .n-in:focus{outline:none;border-color:var(--accent);box-shadow:var(--shadow-focus)}
 .n-in::placeholder{color:var(--text-subtle)}
-.n-add-row{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.n-add-row{display:none;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.n-add.on .n-add-row,.n-add:has(.n-in:not(:placeholder-shown)) .n-add-row{display:flex}
 .n-add-row .btn{margin-left:auto}
 .n-add .tag{gap:6px}
 .n-bar{display:flex;gap:12px 20px;align-items:center;flex-wrap:wrap}
